@@ -933,6 +933,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         rewardToken = new ExampleERC20();
         stakingToken = new ExampleERC721();
+        weth = new MockWETH();
         rewardCalculator = new ExampleRewardCalculator(DEFAULT_REWARD_RATE);
 
         stakingToken.setApprovalForAll(address(app), true);
