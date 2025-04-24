@@ -10,6 +10,7 @@ Ported from [Euler.xyz's Fee Flow](https://github.com/euler-xyz/fee-flow) for fo
 
 - removed requirement for Euler Vault Connector, since it's not available on Beam, and adjusted tests accordingly.
 - patched `buy` method to set up secondary rewards instead of paying out the price of auctioned tokens to a single recipient.
+- added upgradeable contract variant
 
 ## Protocol Authors
 
