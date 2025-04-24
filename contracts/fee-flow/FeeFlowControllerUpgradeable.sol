@@ -4,12 +4,13 @@ pragma solidity 0.8.25;
 import {ERC20} from "@solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "@solmate/utils/SafeTransferLib.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable@5.0.2/access/AccessControlUpgradeable.sol";
 import {INative721TokenStakingManager} from "../validator-manager/interfaces/INative721TokenStakingManager.sol";
 
 /// @title FeeFlowControllerUpgradeable
 /// @author Euler Labs (https://eulerlabs.com)
 /// @notice Continous back to back dutch auctions selling any asset received by this contract
-contract FeeFlowControllerUpgradeable is Initializable {
+contract FeeFlowControllerUpgradeable is Initializable, AccessControlUpgradeable {
     using SafeTransferLib for ERC20;
 
     uint256 public constant MIN_EPOCH_PERIOD = 1 hours;
@@ -19,6 +20,7 @@ contract FeeFlowControllerUpgradeable is Initializable {
     uint256 public constant ABS_MIN_INIT_PRICE = 1e6; // Minimum sane value for init price
     uint256 public constant ABS_MAX_INIT_PRICE = type(uint192).max; // chosen so that initPrice * priceMultiplier does not exceed uint256
     uint256 public constant PRICE_MULTIPLIER_SCALE = 1e18;
+    bytes32 public constant REWARDS_MANAGER_ROLE = keccak256("REWARDS_MANAGER_ROLE");
 
     ERC20 public paymentToken;
     address public paymentReceiver;
@@ -103,6 +105,10 @@ contract FeeFlowControllerUpgradeable is Initializable {
         epochPeriod = epochPeriod_;
         priceMultiplier = priceMultiplier_;
         minInitPrice = minInitPrice_;
+
+        __AccessControl_init();
+        grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        grantRole(REWARDS_MANAGER_ROLE, _msgSender());
     }
 
     /// @dev Allows a user to buy assets by transferring payment tokens and receiving the assets.
@@ -180,6 +186,26 @@ contract FeeFlowControllerUpgradeable is Initializable {
         return paymentAmount;
     }
 
+    /// @dev Registers a reward amount for a specific epoch and token.
+    /// @param primary A boolean indicating whether to register in the primary reward pool (true) or the NFT pool (false).
+    /// @param epoch The staking epoch for which rewards are being registered.
+    /// @param token The address of the token being allocated as a reward.
+    /// @param amount The amount of the token to be distributed as rewards.
+    /// @notice This function acts as a permissioned proxy for {INative721TokenStakingManager-registerRewards}
+    function registerRewards(
+        bool primary,
+        uint64 epoch,
+        address token,
+        uint256 amount
+    ) external virtual onlyRole(REWARDS_MANAGER_ROLE) nonReentrant {
+        INative721TokenStakingManager(paymentReceiver).registerRewards(
+            primary,
+            epoch,
+            token,
+            amount
+        );
+    }
+
     /// @dev Retrieves the current price from the cache based on the elapsed time since the start of the epoch.
     /// @param slot0Cache The Slot0 struct containing the initial price and start time of the epoch.
     /// @return price The current price calculated based on the elapsed time and the initial price.
@@ -206,11 +232,5 @@ contract FeeFlowControllerUpgradeable is Initializable {
     /// @return Slot0 The Slot0 value as a Slot0 struct
     function getSlot0() external view nonReentrantView returns (Slot0 memory) {
         return slot0;
-    }
-
-    /// @dev Provides the sender of the current execution context
-    /// @return The address of the message sender.
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
     }
 }
