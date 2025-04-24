@@ -314,16 +314,33 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         app.registerRewards(true, 0, address(rewardToken), REWARD_PER_EPOCH);
     }
 
-    function testPermissionlessPrimaryRewardRegistration() public {
-        vm.deal(DEFAULT_DELEGATOR_ADDRESS, 2000 ether);
+    function testPermissionlessRewardRegistration() public {
         vm.prank(DEFAULT_DELEGATOR_ADDRESS);
-
-        // send native tokens and wrap/register directly
-        app.registerPrimaryRewards{value: 1100 ether}();
 
         // register existing balance
         vm.deal(address(app), 900 ether);
         app.registerPrimaryRewards();
+
+        // check that the app's native balance is 0 after registration
+        assertEq(address(app).balance, 0, "StakingManager's native balance should be 0");
+    }
+
+    function testPermissionlessRewardRegistrationSendingNative() public {
+        vm.prank(DEFAULT_DELEGATOR_ADDRESS);
+        vm.deal(DEFAULT_DELEGATOR_ADDRESS, 1100 ether);
+
+        // send native tokens and wrap/register directly
+        app.registerPrimaryRewards{value: 1000 ether}();
+
+        // check that the app's native balance is 0 after registration
+        assertEq(address(app).balance, 0, "StakingManager's native balance should be 0");
+    }
+
+    function testPermissionlessRewardRegistrationNoNativeBalance() public {
+        vm.prank(DEFAULT_DELEGATOR_ADDRESS);
+
+        // check that the app's native balance is 0 before testing
+        assertEq(address(app).balance, 0, "StakingManager's initial native balance must be 0 for this test");
 
         // error when contract holds no balance
         vm.expectRevert(
