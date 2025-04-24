@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {ERC20} from "@solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "@solmate/utils/SafeTransferLib.sol";
+import {INative721TokenStakingManager} from "../validator-manager/interfaces/INative721TokenStakingManager.sol";
 
 /// @title FeeFlowController
 /// @author Euler Labs (https://eulerlabs.com)
@@ -128,7 +129,19 @@ contract FeeFlowController {
         if (paymentAmount > maxPaymentTokenAmount) revert MaxPaymentTokenAmountExceeded();
 
         if (paymentAmount > 0) {
-            paymentToken.safeTransferFrom(sender, paymentReceiver, paymentAmount);
+            /// PATCH: register secondary rewards
+            // transfer payment tokens to auction contract
+            paymentToken.safeTransferFrom(sender, address(this), paymentAmount);
+        
+            // get *next* epoch
+            INative721TokenStakingManager stakingManager = INative721TokenStakingManager(paymentReceiver);
+            uint64 nextEpoch = stakingManager.getEpoch() + 1;
+
+            // approve payment tokens to staking manager contract
+            ERC20(paymentToken).approve(paymentReceiver, paymentAmount);
+
+            // register secondary rewards for next epoch
+            stakingManager.registerRewards(false, nextEpoch, address(paymentToken), paymentAmount);
         }
 
         for (uint256 i = 0; i < assets.length; ++i) {
