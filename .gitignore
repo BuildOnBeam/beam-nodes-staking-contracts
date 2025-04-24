@@ -30,6 +30,7 @@ UniversalTeleporterMessengerContractAddress.txt
 # miscellaneous
 .idea/
 contracts/pkg
+.DS_Store
 
 # Generated template files
 docker-compose-test-local.yml
