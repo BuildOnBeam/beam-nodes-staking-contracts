@@ -299,8 +299,10 @@ contract Native721TokenStakingManager is
             } else {
                 $._rewardWithdrawnNFT[epoch][sender][tokens[i]] += reward;
             }
-            emit RewardClaimed(primary, epoch, sender, tokens[i], reward);
-            IERC20(tokens[i]).transfer(recipient, reward);
+            if(reward != 0){
+                emit RewardClaimed(primary, epoch, sender, tokens[i], reward);
+                IERC20(tokens[i]).transfer(recipient, reward);
+            }
         }
     }
 
