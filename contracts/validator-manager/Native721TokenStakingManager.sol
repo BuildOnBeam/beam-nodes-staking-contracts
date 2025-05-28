@@ -674,12 +674,8 @@ contract Native721TokenStakingManager is
     ) internal override returns (uint64) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
-        if ($._uptimeKeeper != _msgSender()) {
-            revert OwnableUnauthorizedAccount(_msgSender());
-        }
-
         uint64 uptime = _validateUptime(validationID, messageIndex);
-        uint64 epoch = _getEpoch() - 1;
+        uint64 epoch = _getEpoch();
         uint64 dur = $._epochDuration;
 
         PoSValidatorInfo storage validatorInfo = $._posValidatorInfo[validationID];
