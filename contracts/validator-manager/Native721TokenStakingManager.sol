@@ -5,12 +5,8 @@
 
 pragma solidity 0.8.25;
 
-import {
-    StakingManagerSettings
-} from "./interfaces/IStakingManager.sol";
-import {
-    StakingManager
-} from "./StakingManager.sol";
+import {StakingManagerSettings} from "./interfaces/IStakingManager.sol";
+import {StakingManager} from "./StakingManager.sol";
 import {
     Delegator,
     DelegatorStatus,
@@ -18,13 +14,14 @@ import {
     PoSValidatorInfo,
     StakingManagerSettings
 } from "./interfaces/IStakingManager.sol";
-import { Math } from "@openzeppelin/contracts@5.0.2/utils/math/Math.sol";
+import {Math} from "@openzeppelin/contracts@5.0.2/utils/math/Math.sol";
 import {INative721TokenStakingManager} from "./interfaces/INative721TokenStakingManager.sol";
 import {IERC721} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts@5.0.2/token/ERC20/IERC20.sol";
 import {Address} from "@openzeppelin/contracts@5.0.2/utils/Address.sol";
 import {ICMInitializable} from "@utilities/ICMInitializable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
+import {Initializable} from
+    "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
 import {WarpMessage} from
     "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {ValidatorMessages} from "./ValidatorMessages.sol";
@@ -38,6 +35,7 @@ import {OwnableUpgradeable} from
  *
  * @custom:security-contact https://github.com/ava-labs/icm-contracts/blob/main/SECURITY.md
  */
+
 contract Native721TokenStakingManager is
     Initializable,
     StakingManager,
@@ -57,7 +55,7 @@ contract Native721TokenStakingManager is
     // keccak256(abi.encode(uint256(keccak256("avalanche-icm.storage.Native721TokenStakingManager")) - 1)) & ~bytes32(uint256(0xff));
     bytes32 public constant ERC721_STAKING_MANAGER_STORAGE_LOCATION =
         0xf2d79c30881febd0da8597832b5b1bf1f4d4b2209b19059420303eb8fcab8a00;
-    
+
     uint8 public constant UPTIME_REWARDS_THRESHOLD_PERCENTAGE = 80;
     uint64 public constant REWARD_CLAIM_DELAY = 7 days;
 
@@ -66,7 +64,6 @@ contract Native721TokenStakingManager is
     error InvalidInputLengths(uint256 inputLength1, uint256 inputLength2);
     error TooEarly(uint256 actualTime, uint256 expectedTime);
     error TooLate(uint256 actualTime, uint256 expectedTime);
-
 
     // solhint-disable ordering
     function _getERC721StakingManagerStorage()
@@ -79,7 +76,9 @@ contract Native721TokenStakingManager is
         }
     }
 
-    constructor(ICMInitializable init) {
+    constructor(
+        ICMInitializable init
+    ) {
         if (init == ICMInitializable.Disallowed) {
             _disableInitializers();
         }
@@ -145,19 +144,16 @@ contract Native721TokenStakingManager is
     /**
      * @notice See {INative721TokenStakingManager-initiateDelegatorRegistration}.
      */
-    function initiateDelegatorRegistration(bytes32 validationID)
-        external
-        payable
-        nonReentrant
-        returns (bytes32)
-    {
+    function initiateDelegatorRegistration(
+        bytes32 validationID
+    ) external payable nonReentrant returns (bytes32) {
         return _initiateDelegatorRegistration(validationID, _msgSender(), msg.value);
     }
 
     /**
-    * @notice See {INative721TokenStakingManager-registerNFTDelegation}.
-    *
-    */
+     * @notice See {INative721TokenStakingManager-registerNFTDelegation}.
+     *
+     */
     function registerNFTDelegation(
         bytes32 validationID,
         uint256[] memory tokenIDs
@@ -167,9 +163,9 @@ contract Native721TokenStakingManager is
     }
 
     /**
-    * @notice See {INative721TokenStakingManager-initializeEndNFTDelegation}.
-    *
-    */
+     * @notice See {INative721TokenStakingManager-initializeEndNFTDelegation}.
+     *
+     */
     function initiateNFTDelegatorRemoval(
         bytes32 delegationID
     ) external nonReentrant {
@@ -177,9 +173,9 @@ contract Native721TokenStakingManager is
     }
 
     /**
-    * @notice See {INative721TokenStakingManager-completeEndNFTDelegation}.
-    *
-    */
+     * @notice See {INative721TokenStakingManager-completeEndNFTDelegation}.
+     *
+     */
     function completeNFTDelegatorRemoval(
         bytes32 delegationID
     ) external nonReentrant {
@@ -191,9 +187,9 @@ contract Native721TokenStakingManager is
         // callable after that has been done.
         if (delegator.status != DelegatorStatus.PendingRemoved) {
             revert InvalidDelegatorStatus(delegator.status);
-        } 
+        }
 
-        if(block.timestamp < delegator.endTime + $._unlockDuration) {
+        if (block.timestamp < delegator.endTime + $._unlockDuration) {
             revert UnlockDurationNotPassed(uint64(block.timestamp));
         }
 
@@ -201,8 +197,8 @@ contract Native721TokenStakingManager is
     }
 
     /**
-    * @notice See {INative721TokenStakingManager-registerNFTRedelegation}.
-    */
+     * @notice See {INative721TokenStakingManager-registerNFTRedelegation}.
+     */
     function registerNFTRedelegation(
         bytes32 delegationID,
         bytes32 nextValidationID
@@ -218,19 +214,26 @@ contract Native721TokenStakingManager is
     /**
      * @notice unlocks the validator stake, to be called after removal and passing of unlock duration
      * @param validationID The unique identifier of the validator to unlock.
-     */ 
-    function unlockValidator(bytes32 validationID) external override nonReentrant {
+     */
+    function unlockValidator(
+        bytes32 validationID
+    ) external override nonReentrant {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         _unlockValidator(validationID);
-        _unlockNFTs($._posValidatorInfo[validationID].owner, $._posValidatorInfo[validationID].tokenIDs);
+        _unlockNFTs(
+            $._posValidatorInfo[validationID].owner, $._posValidatorInfo[validationID].tokenIDs
+        );
     }
 
     /**
      * @notice See {INative721TokenStakingManager-submitUptimeProofs}.
      */
-    function submitUptimeProofs(bytes32[] memory validationIDs, uint32[] memory messageIndexes) external {
-        if(validationIDs.length != messageIndexes.length){
+    function submitUptimeProofs(
+        bytes32[] memory validationIDs,
+        uint32[] memory messageIndexes
+    ) external {
+        if (validationIDs.length != messageIndexes.length) {
             revert InvalidInputLengths(validationIDs.length, messageIndexes.length);
         }
         for (uint256 i = 0; i < validationIDs.length; i++) {
@@ -251,7 +254,7 @@ contract Native721TokenStakingManager is
      * Requirements:
      * - The caller must have participated in staking or NFT delegation during the given epoch.
      * - The function calculates rewards based on the caller’s recorded weight and subtracts any already withdrawn rewards.
-    */
+     */
     function getRewards(
         bool primary,
         uint64 epoch,
@@ -262,15 +265,19 @@ contract Native721TokenStakingManager is
 
         uint256 reward;
 
-        if(primary && $._totalRewardWeight[epoch] == 0){ return reward; }
-        if(!primary && $._totalRewardWeightNFT[epoch] == 0){ return reward; }
+        if (primary && $._totalRewardWeight[epoch] == 0) return reward;
+        if (!primary && $._totalRewardWeightNFT[epoch] == 0) return reward;
 
-        if(primary){
-            reward = (($._rewardPools[epoch][token] * $._accountRewardWeight[epoch][account])
-                / $._totalRewardWeight[epoch]) - $._rewardWithdrawn[epoch][account][token];
+        if (primary) {
+            reward = (
+                ($._rewardPools[epoch][token] * $._accountRewardWeight[epoch][account])
+                    / $._totalRewardWeight[epoch]
+            ) - $._rewardWithdrawn[epoch][account][token];
         } else {
-            reward = (($._rewardPoolsNFT[epoch][token] * $._accountRewardWeightNFT[epoch][account])
-                / $._totalRewardWeightNFT[epoch]) - $._rewardWithdrawnNFT[epoch][account][token];
+            reward = (
+                ($._rewardPoolsNFT[epoch][token] * $._accountRewardWeightNFT[epoch][account])
+                    / $._totalRewardWeightNFT[epoch]
+            ) - $._rewardWithdrawnNFT[epoch][account][token];
         }
         return reward;
     }
@@ -287,19 +294,19 @@ contract Native721TokenStakingManager is
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         uint64 claimStart = (epoch + 1) * $._epochDuration + REWARD_CLAIM_DELAY - $._epochOffset;
-        if(block.timestamp < claimStart){
+        if (block.timestamp < claimStart) {
             revert TooEarly(block.timestamp, claimStart);
         }
-        
+
         address sender = _msgSender();
-        for(uint256 i = 0; i < tokens.length; i++){
+        for (uint256 i = 0; i < tokens.length; i++) {
             uint256 reward = getRewards(primary, epoch, tokens[i], sender);
-            if(primary){
+            if (primary) {
                 $._rewardWithdrawn[epoch][sender][tokens[i]] += reward;
             } else {
                 $._rewardWithdrawnNFT[epoch][sender][tokens[i]] += reward;
             }
-            if(reward != 0){
+            if (reward != 0) {
                 emit RewardClaimed(primary, epoch, sender, tokens[i], reward);
                 IERC20(tokens[i]).transfer(recipient, reward);
             }
@@ -317,7 +324,7 @@ contract Native721TokenStakingManager is
     ) external onlyOwner nonReentrant {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
-        if(primary){
+        if (primary) {
             $._rewardPools[epoch][token] += amount;
         } else {
             $._rewardPoolsNFT[epoch][token] += amount;
@@ -337,11 +344,11 @@ contract Native721TokenStakingManager is
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         uint64 claimStart = (epoch + 1) * $._epochDuration + REWARD_CLAIM_DELAY - $._epochOffset;
-        if(block.timestamp >= claimStart){
+        if (block.timestamp >= claimStart) {
             revert TooLate(block.timestamp, claimStart);
         }
 
-        if(primary){
+        if (primary) {
             IERC20(token).transfer(_msgSender(), $._rewardPools[epoch][token]);
             $._rewardPools[epoch][token] = 0;
         } else {
@@ -361,7 +368,9 @@ contract Native721TokenStakingManager is
     /**
      * @notice See {StakingManager-_lock}
      */
-    function _lock(uint256 value) internal virtual override returns (uint256) {
+    function _lock(
+        uint256 value
+    ) internal virtual override returns (uint256) {
         return value;
     }
 
@@ -380,9 +389,13 @@ contract Native721TokenStakingManager is
      * @param tokenIDs The array of token IDs to be locked.
      * @return The number of tokens successfully locked.
      */
-    function _lockNFTs(uint256[] memory tokenIDs) internal returns (uint256) {
+    function _lockNFTs(
+        uint256[] memory tokenIDs
+    ) internal returns (uint256) {
         for (uint256 i = 0; i < tokenIDs.length; i++) {
-            _getERC721StakingManagerStorage()._token.safeTransferFrom(_msgSender(), address(this), tokenIDs[i]);
+            _getERC721StakingManagerStorage()._token.safeTransferFrom(
+                _msgSender(), address(this), tokenIDs[i]
+            );
         }
         return tokenIDs.length;
     }
@@ -404,8 +417,7 @@ contract Native721TokenStakingManager is
      * @notice See {StakingManager-_reward}
      * @dev Distributes ERC20 rewards to stakers
      */
-    function _reward(address account, uint256 amount) internal virtual override {
-    }
+    function _reward(address account, uint256 amount) internal virtual override {}
 
     function _getEpoch() internal view virtual returns (uint64) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
@@ -479,7 +491,7 @@ contract Native721TokenStakingManager is
 
     /**
      * @notice Registers an NFT-based delegation to a PoS validator.
-     * @dev This function records the delegation details, ensures the validator is active, 
+     * @dev This function records the delegation details, ensures the validator is active,
      *      updates the staking records, and emits relevant events.
      * @param validationID The identifier of the PoS validator to delegate to.
      * @param delegatorAddress The address of the user delegating NFTs.
@@ -515,11 +527,13 @@ contract Native721TokenStakingManager is
         }
 
         if ($._posValidatorInfo[validationID].totalTokens + tokenIDs.length > $._maximumNFTAmount) {
-            revert InvalidNFTAmount(uint64($._posValidatorInfo[validationID].totalTokens + tokenIDs.length));
+            revert InvalidNFTAmount(
+                uint64($._posValidatorInfo[validationID].totalTokens + tokenIDs.length)
+            );
         }
 
         uint64 nonce = ++$._posValidatorInfo[validationID].tokenNonce;
-        
+
         // Update the delegation status
         bytes32 delegationID = keccak256(abi.encodePacked(validationID, nonce, "ERC721"));
         $._delegatorStakes[delegationID].owner = delegatorAddress;
@@ -552,20 +566,20 @@ contract Native721TokenStakingManager is
         return delegationID;
     }
 
-   /**
-    * @notice Initiates the process of ending an NFT delegation for a given delegation ID.
-    * @dev This function ensures that the delegation is active and validates that the caller is authorized to end it.
-    *      If the validator status is valid, the delegation status is updated to `PendingRemoved`. If the validator
-    *      is complete, then removal is completed directly. Status is updated to `Completed` and initate
-    *      `InitiatedDelegatorRemoval` is not emitted. 
-    * @param delegationID The unique identifier of the NFT delegation to be ended.
-    *
-    * Reverts if:
-    * - The delegation is not active (`InvalidDelegatorStatus`).
-    * - The caller is not authorized to end the delegation (`UnauthorizedOwner`).
-    * - The minimum stake duration has not passed for the validator or the delegator (`MinStakeDurationNotPassed`).
-    * - The validator is not in a valid state to end the delegation (`InvalidValidatorStatus`).
-    */
+    /**
+     * @notice Initiates the process of ending an NFT delegation for a given delegation ID.
+     * @dev This function ensures that the delegation is active and validates that the caller is authorized to end it.
+     *      If the validator status is valid, the delegation status is updated to `PendingRemoved`. If the validator
+     *      is complete, then removal is completed directly. Status is updated to `Completed` and initate
+     *      `InitiatedDelegatorRemoval` is not emitted.
+     * @param delegationID The unique identifier of the NFT delegation to be ended.
+     *
+     * Reverts if:
+     * - The delegation is not active (`InvalidDelegatorStatus`).
+     * - The caller is not authorized to end the delegation (`UnauthorizedOwner`).
+     * - The minimum stake duration has not passed for the validator or the delegator (`MinStakeDurationNotPassed`).
+     * - The validator is not in a valid state to end the delegation (`InvalidValidatorStatus`).
+     */
     function _initiateNFTDelegatorRemoval(
         bytes32 delegationID
     ) internal {
@@ -585,16 +599,22 @@ contract Native721TokenStakingManager is
             revert UnauthorizedOwner(_msgSender());
         }
 
-        if (validator.status == ValidatorStatus.Active || validator.status == ValidatorStatus.Completed) {
+        if (
+            validator.status == ValidatorStatus.Active
+                || validator.status == ValidatorStatus.Completed
+        ) {
             // Check that minimum stake duration has passed.
-            if (validator.status != ValidatorStatus.Completed && block.timestamp < delegator.startTime + $._minimumStakeDuration) {
+            if (
+                validator.status != ValidatorStatus.Completed
+                    && block.timestamp < delegator.startTime + $._minimumStakeDuration
+            ) {
                 revert MinStakeDurationNotPassed(uint64(block.timestamp));
             }
 
             $._delegatorStakes[delegationID].status = DelegatorStatus.PendingRemoved;
             $._delegatorStakes[delegationID].endTime = uint64(block.timestamp);
             if (validator.status == ValidatorStatus.Completed) {
-                $._delegatorStakes[delegationID].endTime = validator.endTime; 
+                $._delegatorStakes[delegationID].endTime = validator.endTime;
             }
             emit InitiatedDelegatorRemoval(delegationID, validationID);
         } else {
@@ -603,15 +623,15 @@ contract Native721TokenStakingManager is
     }
 
     /**
-    * @notice Completes the process of ending an NFT delegation and returns the associated token IDs.
-    * @dev This function removes the delegation from the validator and account, retrieves the associated NFTs,
-    *      and clears the delegation data from storage. It emits a `DelegationEnded` event upon completion.
-    * @param delegationID The unique identifier of the NFT delegation to be completed.
-    * @return tokenIDs An array of token IDs associated with the completed delegation.
-    *
-    * Emits:
-    * - `DelegationEnded` when the delegation is successfully completed and removed from storage.
-    */
+     * @notice Completes the process of ending an NFT delegation and returns the associated token IDs.
+     * @dev This function removes the delegation from the validator and account, retrieves the associated NFTs,
+     *      and clears the delegation data from storage. It emits a `DelegationEnded` event upon completion.
+     * @param delegationID The unique identifier of the NFT delegation to be completed.
+     * @return tokenIDs An array of token IDs associated with the completed delegation.
+     *
+     * Emits:
+     * - `DelegationEnded` when the delegation is successfully completed and removed from storage.
+     */
     function _completeNFTDelegatorRemoval(
         bytes32 delegationID
     ) internal returns (uint256[] memory tokenIDs) {
@@ -631,47 +651,51 @@ contract Native721TokenStakingManager is
     }
 
     /**
-    * @notice Updates the uptime of a validator based on a verified ValidationUptimeMessage received via Warp.
-    * @dev This function extracts the uptime from a Warp message, validates its authenticity, and updates the
-    *      stored uptime for the specified validator if the provided uptime is greater than the currently stored uptime.
-    *      It also updates the validator's epoch information and balance trackers for both standard and NFT delegations.
-    * @param validationID The unique identifier of the validator whose uptime is being updated.
-    * @param messageIndex The index of the Warp message in the Warp messenger to validate and process.
-    * @return The updated uptime for the specified validator, or the current uptime if no update is performed.
-    *
-    * Reverts if:
-    * - The Warp message is invalid.
-    * - The source chain ID in the Warp message does not match the expected uptime blockchain ID.
-    * - The origin sender address in the Warp message is not the zero address.
-    * - The `validationID` in the Warp message payload does not match the provided `validationID`.
-    *
-    * Emits:
-    * - `UptimeUpdated` event when the uptime is successfully updated for a validator.
-    */
-    function _updateUptime(bytes32 validationID, uint32 messageIndex) internal override returns (uint64) {
+     * @notice Updates the uptime of a validator based on a verified ValidationUptimeMessage received via Warp.
+     * @dev This function extracts the uptime from a Warp message, validates its authenticity, and updates the
+     *      stored uptime for the specified validator if the provided uptime is greater than the currently stored uptime.
+     *      It also updates the validator's epoch information and balance trackers for both standard and NFT delegations.
+     * @param validationID The unique identifier of the validator whose uptime is being updated.
+     * @param messageIndex The index of the Warp message in the Warp messenger to validate and process.
+     * @return The updated uptime for the specified validator, or the current uptime if no update is performed.
+     *
+     * Reverts if:
+     * - The Warp message is invalid.
+     * - The source chain ID in the Warp message does not match the expected uptime blockchain ID.
+     * - The origin sender address in the Warp message is not the zero address.
+     * - The `validationID` in the Warp message payload does not match the provided `validationID`.
+     *
+     * Emits:
+     * - `UptimeUpdated` event when the uptime is successfully updated for a validator.
+     */
+    function _updateUptime(
+        bytes32 validationID,
+        uint32 messageIndex
+    ) internal override returns (uint64) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         if ($._uptimeKeeper != _msgSender()) {
             revert OwnableUnauthorizedAccount(_msgSender());
         }
-        
+
         uint64 uptime = _validateUptime(validationID, messageIndex);
         uint64 epoch = _getEpoch() - 1;
         uint64 dur = $._epochDuration;
 
         PoSValidatorInfo storage validatorInfo = $._posValidatorInfo[validationID];
 
-        if(validatorInfo.uptimeSeconds >= uptime ){
+        if (validatorInfo.uptimeSeconds >= uptime) {
             return validatorInfo.uptimeSeconds;
         }
 
         uint256 validationUptime = uptime - validatorInfo.uptimeSeconds;
-        if (validationUptime * 100 / dur >= UPTIME_REWARDS_THRESHOLD_PERCENTAGE){
+        if (validationUptime * 100 / dur >= UPTIME_REWARDS_THRESHOLD_PERCENTAGE) {
             validationUptime = dur;
         }
 
         // Calculate validator weights
-        uint256 valWeight = $._manager.getValidator(validationID).startingWeight * validationUptime / dur;
+        uint256 valWeight =
+            $._manager.getValidator(validationID).startingWeight * validationUptime / dur;
         uint256 valWeightNFT = (validatorInfo.tokenIDs.length * 1e6) * validationUptime / dur;
 
         // Update reward weights for validator owner
@@ -683,23 +707,25 @@ contract Native721TokenStakingManager is
         validatorInfo.uptimeSeconds = uptime;
 
         $._validationUptimes[epoch][validationID] += validationUptime;
-        
+
         emit UptimeUpdated(validationID, uptime, epoch);
         return uptime;
     }
 
     /**
-    * @notice Calculated and updates the reward weight of the given delegations for the previous epoch after successfully 
-    *         submitting the uptime of the respective validators
-    * @param delegationIDs An array of delegation IDs associated with the staking process.
-    */
-    function resolveRewards(bytes32[] memory delegationIDs) external {
+     * @notice Calculated and updates the reward weight of the given delegations for the previous epoch after successfully
+     *         submitting the uptime of the respective validators
+     * @param delegationIDs An array of delegation IDs associated with the staking process.
+     */
+    function resolveRewards(
+        bytes32[] memory delegationIDs
+    ) external {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         if ($._uptimeKeeper != _msgSender()) {
             revert OwnableUnauthorizedAccount(_msgSender());
         }
-        
+
         uint64 epoch = _getEpoch() - 1;
         uint64 dur = $._epochDuration;
 
@@ -714,17 +740,23 @@ contract Native721TokenStakingManager is
             {
                 uint64 delegationStart = uint64(Math.max(delegator.startTime, epochStart));
                 uint64 delegationEnd = delegator.endTime != 0 ? delegator.endTime : epochEnd;
-                if (epochStart > delegationEnd){ continue; }
-                delegationUptime = uint64(Math.min(delegationEnd - delegationStart, $._validationUptimes[epoch][delegator.validationID]));
+                if (epochStart > delegationEnd) continue;
+                delegationUptime = uint64(
+                    Math.min(
+                        delegationEnd - delegationStart,
+                        $._validationUptimes[epoch][delegator.validationID]
+                    )
+                );
 
-                if (delegationUptime * 100 / dur >= UPTIME_REWARDS_THRESHOLD_PERCENTAGE){
+                if (delegationUptime * 100 / dur >= UPTIME_REWARDS_THRESHOLD_PERCENTAGE) {
                     delegationUptime = dur;
                 }
             }
             uint256 delWeight = (delegator.weight * delegationUptime) / dur;
-            uint256 feeWeight = (delWeight * validatorInfo.delegationFeeBips) / BIPS_CONVERSION_FACTOR;
+            uint256 feeWeight =
+                (delWeight * validatorInfo.delegationFeeBips) / BIPS_CONVERSION_FACTOR;
 
-            if ($._lockedNFTs[delegationIDs[i]].length == 0){
+            if ($._lockedNFTs[delegationIDs[i]].length == 0) {
                 $._accountRewardWeight[epoch][validatorInfo.owner] += feeWeight;
                 $._accountRewardWeight[epoch][delegator.owner] += delWeight - feeWeight;
                 $._totalRewardWeight[epoch] += delWeight;
@@ -734,7 +766,7 @@ contract Native721TokenStakingManager is
                 $._totalRewardWeightNFT[epoch] += delWeight;
             }
             emit RewardResolved(delegationIDs[i], epoch);
-        }        
+        }
     }
 
     /**
@@ -759,7 +791,10 @@ contract Native721TokenStakingManager is
      * - `InvalidWarpOriginSenderAddress` if the sender is not the zero address.
      * - `UnexpectedValidationID` if the extracted validation ID does not match the provided one.
      */
-    function _validateUptime(bytes32 validationID, uint32 messageIndex) internal view returns (uint64) {
+    function _validateUptime(
+        bytes32 validationID,
+        uint32 messageIndex
+    ) internal view returns (uint64) {
         if (!_isPoSValidator(validationID)) {
             revert ValidatorNotPoS(validationID);
         }

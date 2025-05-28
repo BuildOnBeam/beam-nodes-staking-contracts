@@ -9,22 +9,18 @@ import {IStakingManager} from "./IStakingManager.sol";
 import {PChainOwner} from "../ACP99Manager.sol";
 import {IERC721} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721.sol";
 
-
 // TODO; complete interface
 /**
  * Proof of Stake Validator Manager that stakes ERC721 tokens.
  */
 interface INative721TokenStakingManager is IStakingManager {
-
     /**
      * @notice Event emitted when a delegator registration is an NFT delegation
      * @param delegationID The ID of the delegation
      * @param tokenIDs List of tokenIDs that are being delegated
-    **/
-    event DelegatedNFTs(
-        bytes32 indexed delegationID,
-        uint256[] tokenIDs
-    );
+     *
+     */
+    event DelegatedNFTs(bytes32 indexed delegationID, uint256[] tokenIDs);
 
     /**
      * @notice Event emitted when reward is registered
@@ -32,33 +28,20 @@ interface INative721TokenStakingManager is IStakingManager {
      * @param epoch The epoch for which the reward is being registered
      * @param token The reward token
      * @param amount The amount of the reward
-    **/
-    event RewardRegistered(
-        bool primary,
-        uint64 epoch,
-        address token,
-        uint256 amount
-    );
+     *
+     */
+    event RewardRegistered(bool primary, uint64 epoch, address token, uint256 amount);
 
     /**
-    * @notice Event emitted when a reward is cancelled
-    * @param primary True if the reward is primary, false if secondary
-    * @param epoch The epoch for which the reward is being cancelled
-    * @param token The reward token
-    **/
-    event RewardCancelled(
-        bool primary,
-        uint64 epoch,
-        address token
-    );
+     * @notice Event emitted when a reward is cancelled
+     * @param primary True if the reward is primary, false if secondary
+     * @param epoch The epoch for which the reward is being cancelled
+     * @param token The reward token
+     *
+     */
+    event RewardCancelled(bool primary, uint64 epoch, address token);
 
-    event RewardClaimed(
-        bool primary,
-        uint64 epoch,
-        address account,
-        address token,
-        uint256 amount
-    );
+    event RewardClaimed(bool primary, uint64 epoch, address account, address token, uint256 amount);
 
     /**
      * @notice Begins the validator registration process. Locks the provided native asset in the contract as the stake.
@@ -130,12 +113,7 @@ interface INative721TokenStakingManager is IStakingManager {
      * Emits:
      * - `RewardRegistered` event upon successfully registering the reward.
      */
-    function registerRewards(
-        bool primary,
-        uint64 epoch,
-        address token,
-        uint256 amount
-    ) external;
+    function registerRewards(bool primary, uint64 epoch, address token, uint256 amount) external;
 
     /**
      * @notice Cancels previously registered rewards before the claim period starts.
@@ -151,11 +129,7 @@ interface INative721TokenStakingManager is IStakingManager {
      * Emits:
      * - `RewardCancelled` event upon successfully canceling the reward.
      */
-    function cancelRewards(
-        bool primary,
-        uint64 epoch,
-        address token
-    ) external;
+    function cancelRewards(bool primary, uint64 epoch, address token) external;
 
     /**
      * @notice Submits multiple uptime proofs for validation and processing.
@@ -171,57 +145,57 @@ interface INative721TokenStakingManager is IStakingManager {
      * Reverts:
      * - `InvalidInputLengths` if the input arrays have different lengths.
      */
-    function submitUptimeProofs(bytes32[] memory validationIDs, uint32[] memory messageIndexes) external;
+    function submitUptimeProofs(
+        bytes32[] memory validationIDs,
+        uint32[] memory messageIndexes
+    ) external;
 
     /**
-    * @notice Registers an NFT delegation for a specified validator and delegator.
-    * @dev This function locks the specified NFTs by transferring them to the contract and then registers the delegation 
-    *      with the given validator. The NFTs are transferred from the delegator's address to the contract, and the delegation 
-    *      is recorded for the specified validator.
-    * @param validationID The unique identifier of the validator to which the NFT delegation is being registered.
-    * @param tokenIDs An array of token IDs representing the NFTs to be locked and delegated.
-    * @return delegationID A unique identifier for the newly registered NFT delegation.
-    *
-    */
+     * @notice Registers an NFT delegation for a specified validator and delegator.
+     * @dev This function locks the specified NFTs by transferring them to the contract and then registers the delegation
+     *      with the given validator. The NFTs are transferred from the delegator's address to the contract, and the delegation
+     *      is recorded for the specified validator.
+     * @param validationID The unique identifier of the validator to which the NFT delegation is being registered.
+     * @param tokenIDs An array of token IDs representing the NFTs to be locked and delegated.
+     * @return delegationID A unique identifier for the newly registered NFT delegation.
+     *
+     */
     function registerNFTDelegation(
         bytes32 validationID,
         uint256[] memory tokenIDs
     ) external returns (bytes32);
 
     /**
-    * @notice Redelegates an NFT delegation from one validator to another.
-    * @dev This function ends the current NFT delegation, optionally including an uptime proof,
-    *      and registers the NFT delegation with a new validator. The NFTs are transferred from the current delegation
-    *      to the new validator as part of the redelegation process.
-    * @param delegationID The unique identifier of the NFT delegation to be redelegated.
-    * @param nextValidationID The unique identifier of the new validator to which the NFTs will be redelegated.
-    *
-    * Reverts if:
-    * - The current delegation cannot be ended or the redelegation cannot be registered.
-    */
-    function registerNFTRedelegation(
-        bytes32 delegationID,
-        bytes32 nextValidationID
-    ) external;
+     * @notice Redelegates an NFT delegation from one validator to another.
+     * @dev This function ends the current NFT delegation, optionally including an uptime proof,
+     *      and registers the NFT delegation with a new validator. The NFTs are transferred from the current delegation
+     *      to the new validator as part of the redelegation process.
+     * @param delegationID The unique identifier of the NFT delegation to be redelegated.
+     * @param nextValidationID The unique identifier of the new validator to which the NFTs will be redelegated.
+     *
+     * Reverts if:
+     * - The current delegation cannot be ended or the redelegation cannot be registered.
+     */
+    function registerNFTRedelegation(bytes32 delegationID, bytes32 nextValidationID) external;
 
     /**
-    * @notice Initiates the process of ending an NFT delegation for a given delegation ID.
-    * @dev This function calls `_initializeEndNFTDelegation` to validate and update the status of the NFT delegation.
-    *      It ensures the delegation is active and optionally includes an uptime proof.
-    * @param delegationID The unique identifier of the NFT delegation to be ended.
-    */
+     * @notice Initiates the process of ending an NFT delegation for a given delegation ID.
+     * @dev This function calls `_initializeEndNFTDelegation` to validate and update the status of the NFT delegation.
+     *      It ensures the delegation is active and optionally includes an uptime proof.
+     * @param delegationID The unique identifier of the NFT delegation to be ended.
+     */
     function initiateNFTDelegatorRemoval(
         bytes32 delegationID
     ) external;
 
     /**
-    * @notice Completes the process of ending an NFT delegation and unlocks the associated NFTs.
-    * @dev This function validates that the NFT delegation has been marked as `PendingRemoved` and ensures
-    *      that the unlock duration has passed. It calls `_completeEndNFTDelegation` to finalize the process
-    *      and unlocks the NFTs by transferring them back to the delegator's address.
-    * @param delegationID The unique identifier of the NFT delegation to be completed.
-    *
-    */
+     * @notice Completes the process of ending an NFT delegation and unlocks the associated NFTs.
+     * @dev This function validates that the NFT delegation has been marked as `PendingRemoved` and ensures
+     *      that the unlock duration has passed. It calls `_completeEndNFTDelegation` to finalize the process
+     *      and unlocks the NFTs by transferring them back to the delegator's address.
+     * @param delegationID The unique identifier of the NFT delegation to be completed.
+     *
+     */
     function completeNFTDelegatorRemoval(
         bytes32 delegationID
     ) external;

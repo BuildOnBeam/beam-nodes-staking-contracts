@@ -64,26 +64,20 @@ abstract contract StakingManager is
         mapping(bytes32 validationID => PoSValidatorInfo) _posValidatorInfo;
         /// @notice Maps the delegation ID to the delegator information.
         mapping(bytes32 delegationID => Delegator) _delegatorStakes;
-
         mapping(bytes32 delegationID => uint256[]) _lockedNFTs;
-
         mapping(uint64 epoch => uint256) _totalRewardWeight;
         mapping(uint64 epoch => uint256) _totalRewardWeightNFT;
-
         mapping(uint64 epoch => mapping(address account => uint256)) _accountRewardWeight;
         mapping(uint64 epoch => mapping(address account => uint256)) _accountRewardWeightNFT;
-
-        mapping(uint64 epoch => mapping(address account => mapping(address token => uint256))) _rewardWithdrawn;
-        mapping(uint64 epoch => mapping(address account => mapping(address token => uint256))) _rewardWithdrawnNFT;
-
-        mapping(uint64 epoch => mapping(address token => uint256)) _rewardPools; 
+        mapping(uint64 epoch => mapping(address account => mapping(address token => uint256)))
+            _rewardWithdrawn;
+        mapping(uint64 epoch => mapping(address account => mapping(address token => uint256)))
+            _rewardWithdrawnNFT;
+        mapping(uint64 epoch => mapping(address token => uint256)) _rewardPools;
         mapping(uint64 epoch => mapping(address token => uint256)) _rewardPoolsNFT;
-
         uint64 _epochOffset;
-
         mapping(bytes32 ID => bool) _unlocked;
         mapping(uint64 epoch => mapping(bytes32 validationID => uint256)) _validationUptimes;
-
         address _uptimeKeeper;
     }
     // solhint-enable private-vars-leading-underscore
@@ -134,10 +128,9 @@ abstract contract StakingManager is
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function __StakingManager_init(StakingManagerSettings calldata settings)
-        internal
-        onlyInitializing
-    {
+    function __StakingManager_init(
+        StakingManagerSettings calldata settings
+    ) internal onlyInitializing {
         __ReentrancyGuard_init();
         __StakingManager_init_unchained({
             manager: settings.manager,
@@ -276,11 +269,9 @@ abstract contract StakingManager is
      * @notice See {IStakingManager-completeValidatorRemoval}.
      * Extends the functionality of {ACP99Manager-completeValidatorRemoval} by unlocking staking rewards.
      */
-    function completeValidatorRemoval(uint32 messageIndex)
-        external virtual
-        nonReentrant
-        returns (bytes32)
-    {
+    function completeValidatorRemoval(
+        uint32 messageIndex
+    ) external virtual nonReentrant returns (bytes32) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         // Check if the validator has been already been removed from the validator manager.
@@ -293,7 +284,10 @@ abstract contract StakingManager is
      * @dev Helper function that extracts the uptime from a ValidationUptimeMessage Warp message
      * If the uptime is greater than the stored uptime, update the stored uptime.
      */
-    function _updateUptime(bytes32 validationID, uint32 messageIndex) virtual internal returns (uint64) {
+    function _updateUptime(
+        bytes32 validationID,
+        uint32 messageIndex
+    ) internal virtual returns (uint64) {
         (WarpMessage memory warpMessage, bool valid) =
             WARP_MESSENGER.getVerifiedWarpMessage(messageIndex);
         if (!valid) {
@@ -392,7 +386,9 @@ abstract contract StakingManager is
     /**
      * @notice See {IStakingManager-completeValidatorRegistration}.
      */
-    function completeValidatorRegistration(uint32 messageIndex) external returns (bytes32) {
+    function completeValidatorRegistration(
+        uint32 messageIndex
+    ) external returns (bytes32) {
         return _getStakingManagerStorage()._manager.completeValidatorRegistration(messageIndex);
     }
 
@@ -400,7 +396,9 @@ abstract contract StakingManager is
      * @notice Converts a token value to a weight.
      * @param value Token value to convert.
      */
-    function valueToWeight(uint256 value) public view returns (uint64) {
+    function valueToWeight(
+        uint256 value
+    ) public view returns (uint64) {
         uint256 weight = value / _getStakingManagerStorage()._weightToValueFactor;
         if (weight == 0 || weight > type(uint64).max) {
             revert InvalidStakeAmount(value);
@@ -412,7 +410,9 @@ abstract contract StakingManager is
      * @notice Converts a weight to a token value.
      * @param weight weight to convert.
      */
-    function weightToValue(uint64 weight) public view returns (uint256) {
+    function weightToValue(
+        uint64 weight
+    ) public view returns (uint256) {
         return uint256(weight) * _getStakingManagerStorage()._weightToValueFactor;
     }
 
@@ -420,7 +420,9 @@ abstract contract StakingManager is
      * @notice Locks tokens in this contract.
      * @param value Number of tokens to lock.
      */
-    function _lock(uint256 value) internal virtual returns (uint256);
+    function _lock(
+        uint256 value
+    ) internal virtual returns (uint256);
 
     /**
      * @notice Unlocks token to a specific address.
@@ -614,13 +616,14 @@ abstract contract StakingManager is
     }
 
     /**
-    * @notice Initiates the process of ending an delegation for a given delegation ID.
-    * @dev This function ensures that the delegation is active and validates that the caller is authorized to end it.
-    *      If the validator status is valid, the delegation status is updated to `PendingRemoved`. If the validator
-    *      is complete, then removal is completed directly. Status is updated to `Completed` and initate
-    *      `InitiatedDelegatorRemoval` is not emitted. 
-    * @param delegationID The unique identifier of the delegation to be ended.
-    **/
+     * @notice Initiates the process of ending an delegation for a given delegation ID.
+     * @dev This function ensures that the delegation is active and validates that the caller is authorized to end it.
+     *      If the validator status is valid, the delegation status is updated to `PendingRemoved`. If the validator
+     *      is complete, then removal is completed directly. Status is updated to `Completed` and initate
+     *      `InitiatedDelegatorRemoval` is not emitted.
+     * @param delegationID The unique identifier of the delegation to be ended.
+     *
+     */
     function _initiateDelegatorRemoval(
         bytes32 delegationID
     ) internal {
@@ -658,7 +661,7 @@ abstract contract StakingManager is
             emit InitiatedDelegatorRemoval({delegationID: delegationID, validationID: validationID});
             return;
         } else if (validator.status == ValidatorStatus.Completed) {
-            $._delegatorStakes[delegationID].endTime = validator.endTime; 
+            $._delegatorStakes[delegationID].endTime = validator.endTime;
             _completeDelegatorRemoval(delegationID);
             // If the validator has completed, then no further uptimes may be submitted, so we always
             // end the delegation.
@@ -673,7 +676,9 @@ abstract contract StakingManager is
      * @dev Resending the latest validator weight with the latest nonce is safe because all weight changes are
      * cumulative, so the latest weight change will always include the weight change for any added delegators.
      */
-    function resendUpdateDelegator(bytes32 delegationID) external {
+    function resendUpdateDelegator(
+        bytes32 delegationID
+    ) external {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         Delegator memory delegator = $._delegatorStakes[delegationID];
         if (
@@ -742,24 +747,28 @@ abstract contract StakingManager is
     /**
      * @notice unlocks the validator stake, to be called after removal and passing of unlock duration
      * @param validationID The unique identifier of the validator to unlock.
-     */ 
-    function unlockValidator(bytes32 validationID) external virtual nonReentrant {
+     */
+    function unlockValidator(
+        bytes32 validationID
+    ) external virtual nonReentrant {
         _unlockValidator(validationID);
     }
-    
+
     /**
      * @notice unlocks the delegator stake, to be called after removal and passing of unlock duration
      * @param delegationID The unique identifier of the delegator to unlock.
-     */ 
-    function unlockDelegator(bytes32 delegationID) external nonReentrant {
+     */
+    function unlockDelegator(
+        bytes32 delegationID
+    ) external nonReentrant {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
-        Delegator memory delegator = $._delegatorStakes[delegationID]; 
+        Delegator memory delegator = $._delegatorStakes[delegationID];
 
         if (delegator.status != DelegatorStatus.Removed || $._unlocked[delegationID]) {
             revert InvalidDelegatorStatus(delegator.status);
         }
 
-        if(delegator.startTime != 0 && block.timestamp < delegator.endTime + $._unlockDuration) {
+        if (delegator.startTime != 0 && block.timestamp < delegator.endTime + $._unlockDuration) {
             revert UnlockDurationNotPassed(uint64(block.timestamp));
         }
 
@@ -770,12 +779,18 @@ abstract contract StakingManager is
         _unlock(delegator.owner, weightToValue(delegator.weight));
     }
 
-    function _unlockValidator(bytes32 validationID) internal {
+    function _unlockValidator(
+        bytes32 validationID
+    ) internal {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         Validator memory validator = $._manager.getValidator(validationID);
 
-        if ((validator.status != ValidatorStatus.Completed && validator.status != ValidatorStatus.Invalidated) 
-                || $._unlocked[validationID]) {
+        if (
+            (
+                validator.status != ValidatorStatus.Completed
+                    && validator.status != ValidatorStatus.Invalidated
+            ) || $._unlocked[validationID]
+        ) {
             revert InvalidValidatorStatus(validator.status);
         }
 
@@ -783,7 +798,7 @@ abstract contract StakingManager is
             revert ValidatorNotPoS(validationID);
         }
 
-        if(validator.startTime != 0 && block.timestamp < validator.endTime + $._unlockDuration) {
+        if (validator.startTime != 0 && block.timestamp < validator.endTime + $._unlockDuration) {
             revert UnlockDurationNotPassed(uint64(block.timestamp));
         }
 
@@ -791,10 +806,12 @@ abstract contract StakingManager is
 
         emit UnlockedValidation(validationID);
         // The stake is unlocked whether the validation period is completed or invalidated.
-        _unlock($._posValidatorInfo[validationID].owner, weightToValue(validator.startingWeight)); 
+        _unlock($._posValidatorInfo[validationID].owner, weightToValue(validator.startingWeight));
     }
 
-    function _completeDelegatorRemoval(bytes32 delegationID) internal {
+    function _completeDelegatorRemoval(
+        bytes32 delegationID
+    ) internal {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         Delegator memory delegator = $._delegatorStakes[delegationID];
@@ -820,7 +837,9 @@ abstract contract StakingManager is
      * @dev Return true if this is a PoS validator with locked stake. Returns false if this was originally a PoA
      * validator that was later migrated to this PoS manager, or the validator was part of the initial validator set.
      */
-    function _isPoSValidator(bytes32 validationID) internal view returns (bool) {
+    function _isPoSValidator(
+        bytes32 validationID
+    ) internal view returns (bool) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         return $._posValidatorInfo[validationID].owner != address(0);
     }

@@ -1,14 +1,17 @@
 # Validator Management System Documentation
 
 ## Overview
+
 The ValidatorManager, Native721TokenStakingManager, and StakingManager contracts form a system for managing validator staking using ERC721 tokens (NFTs) and native tokens. These contracts are part of the BEAM ecosystem and handle validator registration, delegation, and reward distribution.
 
 ## Core Contracts
 
 ### ValidatorManager
+
 The main contract responsible for managing validators and their lifecycle.
 
 Key Functions:
+
 ```solidity
 function initialize(ValidatorManagerSettings calldata settings)
 function initializeValidatorSet(ConversionData calldata conversionData, uint32 messageIndex)
@@ -24,9 +27,11 @@ function getValidator(bytes32 validationID) external view returns (Validator mem
 ```
 
 ### StakingManager
+
 Abstract base contract providing core staking functionality.
 
 Key Functions:
+
 ```solidity
 function initiateValidatorRegistration(
     bytes memory nodeID,
@@ -48,9 +53,11 @@ function getRewards(
 ```
 
 ### Native721TokenStakingManager
+
 Extension of StakingManager for ERC721 token staking.
 
 Key Functions:
+
 ```solidity
 function initialize(StakingManagerSettings calldata settings, IERC721 stakingToken)
 function initiateValidatorRegistration(
@@ -81,7 +88,9 @@ function registerRewards(
 ## Detailed Functionality
 
 ### Validator Management
+
 - **Validator Registration**
+
   - Requires nodeID, BLS public key, and registration expiry
   - Supports both native token and NFT staking
   - Minimum stake requirements must be met
@@ -94,7 +103,9 @@ function registerRewards(
   - Automatically handles NFT unlocking for NFT-based validators
 
 ### Delegation System
+
 - **NFT Delegation**
+
   - Delegators can stake NFTs to support validators
   - Each NFT contributes to the validator's weight
   - Maximum NFT amount per validator is enforced
@@ -107,13 +118,16 @@ function registerRewards(
   - Handles delegation fee distribution
 
 ### Reward System
+
 - **Reward Pools**
+
   - Dual reward system: Primary and NFT-based pools
   - Primary pool for native token stakers
   - NFT pool for NFT-based stakers
   - Each pool has independent reward distribution
 
 - **Reward Distribution**
+
   - Epoch-based distribution system
   - Rewards are distributed based on:
     - Stake weight
@@ -122,21 +136,23 @@ function registerRewards(
   - Formula: `reward = (pool_amount * stake_weight * uptime_factor) / total_weight`
 
 - **Reward Management**
+
   - Rewards can be registered by contract owner
   - 7-day claim delay after epoch end
   - Rewards can be cancelled before claim period starts
   - Supports multiple reward tokens per epoch
 
 - **Reward Calculation**
+
   ```solidity
   // For primary rewards
-  rewards[i] = (reward_pool[epoch][token] * account_weight[epoch][account]) 
-               / total_weight[epoch] 
+  rewards[i] = (reward_pool[epoch][token] * account_weight[epoch][account])
+               / total_weight[epoch]
                - withdrawn_rewards[epoch][account][token]
 
   // For NFT rewards
-  rewards[i] = (reward_pool_nft[epoch][token] * account_weight_nft[epoch][account]) 
-               / total_weight_nft[epoch] 
+  rewards[i] = (reward_pool_nft[epoch][token] * account_weight_nft[epoch][account])
+               / total_weight_nft[epoch]
                - withdrawn_rewards_nft[epoch][account][token]
   ```
 
@@ -149,6 +165,7 @@ function registerRewards(
   - Uptime proofs can be submitted by authorized keepers
 
 ## Events
+
 - DelegatedNFTs
 - RewardRegistered
 - RewardCancelled
@@ -159,77 +176,89 @@ function registerRewards(
 ## User Flows
 
 ### Validator Management
+
 1. **Validator Registration**
+
    ```
-   initiateValidatorRegistration (with stake + NFTs) 
-   --> registerValidator (relayer) 
+   initiateValidatorRegistration (with stake + NFTs)
+   --> registerValidator (relayer)
    --> validator becomes active
    ```
 
 2. **Validator Removal**
+
    ```
-   initiateValidatorRemoval 
-   --> completeValidatorRemoval (relayer) 
+   initiateValidatorRemoval
+   --> completeValidatorRemoval (relayer)
    --21days--> unlockValidator
    ```
 
 3. **Expired Validator Removal**
    ```
-   initiateValidatorRegistration 
+   initiateValidatorRegistration
    --> completeValidatorRemoval (relayer or anyone)
    ```
 
 ### Delegation Management
+
 1. **Native Token Delegation**
+
    ```
-   initiateDelegatorRegistration (with native tokens) 
-   --> registerDelegator (relayer) 
+   initiateDelegatorRegistration (with native tokens)
+   --> registerDelegator (relayer)
    --> delegation becomes active
    ```
 
 2. **NFT Delegation**
+
    ```
-   registerNFTDelegation (with NFTs) 
+   registerNFTDelegation (with NFTs)
    --> delegation becomes active
    ```
 
 3. **Native Token Delegator Removal**
+
    ```
-   initiateDelegatorRemoval 
-   --> completeDelegatorRemoval (relayer) 
+   initiateDelegatorRemoval
+   --> completeDelegatorRemoval (relayer)
    --21days--> unlockDelegator (native tokens)
    ```
 
 4. **NFT Delegator Removal**
+
    ```
-   initiateNFTDelegatorRemoval 
+   initiateNFTDelegatorRemoval
    --21days--> completeNFTDelegatorRemoval
    ```
 
 5. **Native Token Redelegation**
+
    ```
-   initiateDelegatorRemoval 
-   --> completeDelegatorRemoval (relayer) 
+   initiateDelegatorRemoval
+   --> completeDelegatorRemoval (relayer)
    --> initiateDelegatorRegistration (with new validator)
    ```
 
 6. **NFT Redelegation**
    ```
-   initiateNFTDelegatorRemoval 
-   --> completeNFTDelegatorRemoval (relayer) 
+   initiateNFTDelegatorRemoval
+   --> completeNFTDelegatorRemoval (relayer)
    --> registerNFTDelegation (with new validator)
    ```
 
 ### Reward Management
+
 1. **Reward Registration**
+
    ```
-   registerRewards (owner) 
+   registerRewards (owner)
    --> rewards available after epoch end + 7 days
    ```
 
 2. **Reward Claiming**
+
    ```
-   getRewards (check available rewards) 
+   getRewards (check available rewards)
    --> claimRewards (after 7-day delay)
    ```
 
@@ -239,13 +268,16 @@ function registerRewards(
    ```
 
 ### Uptime Management
+
 1. **Uptime Proof Submission**
+
    ```solidity
    function submitUptimeProofs(
        bytes32[] memory validationIDs,
        uint32[] memory messageIndexes
    ) external
    ```
+
    - Can only be called by the uptime keeper
    - Submits uptime proofs for multiple validators in a single transaction
    - Each validator's uptime is validated against Warp messages
@@ -254,9 +286,11 @@ function registerRewards(
    - If uptime < 80%, actual uptime is used for reward calculation
 
 2. **Reward Resolution**
+
    ```solidity
    function resolveRewards(bytes32[] memory delegationIDs) external
    ```
+
    - Can only be called by the uptime keeper
    - Calculates and updates reward weights for delegations
    - Processes both native token and NFT delegations
@@ -283,6 +317,7 @@ function registerRewards(
 ## Unlock Periods and Functions
 
 ### Unlock Periods
+
 - All unlock periods are 21 days by default but configurable through contract settings
 - Unlock periods start after the completion of removal operations
 - During the unlock period:
@@ -291,11 +326,14 @@ function registerRewards(
   - No operations can be performed on the locked assets
 
 ### Unlock Functions
+
 1. **Native Token Unlocking**
+
    ```solidity
    function unlockValidator(bytes32 validationID)
    function unlockDelegator(bytes32 delegationID)
    ```
+
    - Unlocks native tokens after the unlock period
    - Can only be called after the unlock period has passed
    - Transfers native tokens back to the owner
@@ -306,23 +344,26 @@ function registerRewards(
    - NFTs are transferred back to the owner as part of the completion process
 
 ### Unlock Process
+
 1. **Validator Unlock**
+
    ```
-   completeValidatorRemoval 
-   --21days--> unlockValidator 
+   completeValidatorRemoval
+   --21days--> unlockValidator
    --> unlocks both native tokens and NFTs
    ```
 
 2. **Native Token Delegator Unlock**
+
    ```
-   completeDelegatorRemoval 
-   --21days--> unlockDelegator 
+   completeDelegatorRemoval
+   --21days--> unlockDelegator
    --> unlocks native tokens
    ```
 
 3. **NFT Delegator Unlock**
    ```
-   completeNFTDelegatorRemoval 
+   completeNFTDelegatorRemoval
    --> automatically unlocks and transfers NFTs back to owner
    ```
 

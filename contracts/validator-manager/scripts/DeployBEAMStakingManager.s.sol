@@ -11,12 +11,14 @@ import {ValidatorManager} from "../ValidatorManager.sol";
 import {IERC721} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721.sol";
 import {console} from "forge-std/console.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts@5.0.2/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {TransparentUpgradeableProxy} from
+    "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ITransparentUpgradeableProxy} from
+    "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 /**
  * @notice Script to deploy and initialize Native721TokenStakingManager with a new proxy
- * 
+ *
  * @dev To run this script:
  * 1. Update the initialization parameters below
  * 2. Run the script with forge:
@@ -56,14 +58,16 @@ contract DeployBEAMStakingManager is Script {
     uint256 constant MAXIMUM_NFT_AMOUNT = 1000;
     uint256 constant MINIMUM_DELEGATION_AMOUNT = 100e18;
     uint256 constant WEIGHT_TO_VALUE_FACTOR = 1e18;
-    bytes32 constant UPTIME_BLOCKCHAIN_ID = bytes32(hex"7f78fe8ca06cefa186ef29c15231e45e1056cd8319ceca0695ca61099e610355");
+    bytes32 constant UPTIME_BLOCKCHAIN_ID =
+        bytes32(hex"7f78fe8ca06cefa186ef29c15231e45e1056cd8319ceca0695ca61099e610355");
 
     function run() external {
         // Start broadcasting transactions
         vm.startBroadcast();
 
         // Deploy implementation
-        Native721TokenStakingManager implementation = new Native721TokenStakingManager(ICMInitializable.Disallowed);
+        Native721TokenStakingManager implementation =
+            new Native721TokenStakingManager(ICMInitializable.Disallowed);
         console.log("Deployed implementation at:", address(implementation));
 
         // Prepare initialization data
@@ -85,17 +89,12 @@ contract DeployBEAMStakingManager is Script {
         });
 
         bytes memory initData = abi.encodeWithSelector(
-            Native721TokenStakingManager.initialize.selector,
-            settings,
-            IERC721(NFT_TOKEN_ADDRESS)
+            Native721TokenStakingManager.initialize.selector, settings, IERC721(NFT_TOKEN_ADDRESS)
         );
 
         // Deploy proxy with initialization
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(implementation),
-            msg.sender,
-            initData
-        );
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(address(implementation), msg.sender, initData);
         console.log("Deployed and initialized proxy at:", address(proxy));
 
         bytes32 ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;

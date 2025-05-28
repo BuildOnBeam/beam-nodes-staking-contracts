@@ -151,7 +151,7 @@ interface IStakingManager {
      * @notice Event emitted when the delegator reward weight is resolved
      * @param delegationID The ID of the delegation period
      * @param epoch The current reward epoch
-     */ 
+     */
     event RewardResolved(bytes32 indexed delegationID, uint64 epoch);
 
     /**
@@ -170,7 +170,9 @@ interface IStakingManager {
      * This is forwarded to the ValidatorManager to be parsed.
      * @return The ID of the validator that was registered.
      */
-    function completeValidatorRegistration(uint32 messageIndex) external returns (bytes32);
+    function completeValidatorRegistration(
+        uint32 messageIndex
+    ) external returns (bytes32);
 
     /**
      * @notice Begins the process of ending an active validation period, and reverts if the validation period is not eligible
@@ -197,7 +199,9 @@ interface IStakingManager {
      * This is forwarded to the ValidatorManager to be parsed.
      * @return The ID of the validator that was removed.
      */
-    function completeValidatorRemoval(uint32 messageIndex) external returns (bytes32);
+    function completeValidatorRemoval(
+        uint32 messageIndex
+    ) external returns (bytes32);
 
     /**
      * @notice Completes the delegator registration process by submitting an acknowledgement of the registration of a
@@ -251,7 +255,9 @@ interface IStakingManager {
      * Only necessary if the original message can't be delivered due to validator churn.
      * @param delegationID The ID of the delegation.
      */
-    function resendUpdateDelegator(bytes32 delegationID) external;
+    function resendUpdateDelegator(
+        bytes32 delegationID
+    ) external;
 
     /**
      * @notice Completes the process of ending a delegation by receiving an acknowledgement from the P-Chain.
