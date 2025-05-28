@@ -359,6 +359,24 @@ contract Native721TokenStakingManager is
     }
 
     /**
+     * @notice Allows the contract owner to recover ERC20 tokens that may have been accidentally sent to the contract.
+     * @dev This function allows the contract owner to recover ERC20 tokens that may have been accidentally sent to the contract.
+     * @param token The address of the ERC20 token to recover.
+     * @param to The address to which the recovered tokens will be sent.
+     * @param amount The amount of tokens to recover.
+     *
+     * Requirements:
+     * - Only the contract owner can call this function.
+     */
+    function recoverERC20(
+        address token,
+        address to,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
+        IERC20(token).transfer(to, amount);
+    }
+
+    /**
      * @notice See {INative721TokenStakingManager-erc721}.
      */
     function erc721() external view returns (IERC721) {
