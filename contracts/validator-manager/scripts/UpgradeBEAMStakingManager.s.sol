@@ -9,11 +9,12 @@ import {console} from "forge-std/console.sol";
 import {StakingManagerSettings} from "../Native721TokenStakingManager.sol";
 import {ValidatorManager} from "../ValidatorManager.sol";
 import {IERC721} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721.sol";
-import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ITransparentUpgradeableProxy} from
+    "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 /**
  * @notice Script to upgrade the Native721TokenStakingManager implementation
- * 
+ *
  * @dev To run this script:
  * 1. Make sure the Native721TokenStakingManager contract has reinitializer(3) or higher
  *    (update from reinitializer(2) if needed)
@@ -64,7 +65,8 @@ contract UpgradeBEAMStakingManager is Script {
     uint256 constant MAXIMUM_NFT_AMOUNT = 1000;
     uint256 constant MINIMUM_DELEGATION_AMOUNT = 100e18;
     uint256 constant WEIGHT_TO_VALUE_FACTOR = 1e18;
-    bytes32 constant UPTIME_BLOCKCHAIN_ID = bytes32(hex"f94107902c8418dfcdf51d3f95429688abc7109e0f5b0e806c7e204d542e0761");
+    bytes32 constant UPTIME_BLOCKCHAIN_ID =
+        bytes32(hex"f94107902c8418dfcdf51d3f95429688abc7109e0f5b0e806c7e204d542e0761");
     uint64 constant EPOCH_OFFSET = 55998;
     address constant UPTIME_KEEPER = address(0xfEFFD4f8b89111CD085B80Ce994aB34C7e001a69);
 
@@ -72,9 +74,8 @@ contract UpgradeBEAMStakingManager is Script {
         vm.startBroadcast();
 
         // Deploy new implementation
-        Native721TokenStakingManager newImplementation = new Native721TokenStakingManager(
-            ICMInitializable.Disallowed
-        );
+        Native721TokenStakingManager newImplementation =
+            new Native721TokenStakingManager(ICMInitializable.Disallowed);
         console.log("Deployed new implementation at:", address(newImplementation));
 
         // Add settings struct for initialization
@@ -95,14 +96,18 @@ contract UpgradeBEAMStakingManager is Script {
             epochOffset: EPOCH_OFFSET
         });
 
-       // Get ProxyAdmin instance
+        // Get ProxyAdmin instance
         ProxyAdmin proxyAdmin = ProxyAdmin(_PROXY_ADMIN_ADDRESS);
-        
+
         // Upgrade proxy to new implementation
         proxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(_PROXY_ADDRESS),
             address(newImplementation),
-            abi.encodeWithSelector(Native721TokenStakingManager.initialize.selector, settings, address(NFT_TOKEN_ADDRESS))
+            abi.encodeWithSelector(
+                Native721TokenStakingManager.initialize.selector,
+                settings,
+                address(NFT_TOKEN_ADDRESS)
+            )
         );
         console.log("Upgraded proxy to new implementation");
 

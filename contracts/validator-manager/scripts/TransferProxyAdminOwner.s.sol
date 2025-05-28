@@ -15,7 +15,6 @@ contract TransferProxyAdminOwnerScript is Script {
     address constant NEW_OWNER = address(0x277280e8337E64a3A8E8b795D4E8E5e00BF6e203);
 
     function run() external {
-        
         // Start broadcasting transactions
         vm.startBroadcast();
 

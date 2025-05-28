@@ -31,6 +31,7 @@ import {
     WarpMessage,
     IWarpMessenger
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+
 contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver {
     Native721TokenStakingManager public app;
 
@@ -79,7 +80,11 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
     function testInvalidTokenAddress() public {
         app = new Native721TokenStakingManager(ICMInitializable.Allowed);
-        vm.expectRevert(abi.encodeWithSelector(Native721TokenStakingManager.InvalidTokenAddress.selector, address(0)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Native721TokenStakingManager.InvalidTokenAddress.selector, address(0)
+            )
+        );
 
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
@@ -175,7 +180,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         uint256 tokenID = 6;
         uint256[] memory tokens = new uint256[](DEFAULT_MAXIMUM_NFT_AMOUNT);
-        for(uint256 i = 0; i<DEFAULT_MAXIMUM_NFT_AMOUNT; i++){
+        for (uint256 i = 0; i < DEFAULT_MAXIMUM_NFT_AMOUNT; i++) {
             stakingToken.mint(DEFAULT_DELEGATOR_ADDRESS, ++tokenID);
             tokens[i] = tokenID;
         }
@@ -185,7 +190,8 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                Native721TokenStakingManager.InvalidNFTAmount.selector, DEFAULT_MAXIMUM_NFT_AMOUNT + 1
+                Native721TokenStakingManager.InvalidNFTAmount.selector,
+                DEFAULT_MAXIMUM_NFT_AMOUNT + 1
             )
         );
 
@@ -197,8 +203,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         bytes32 validationID = _registerDefaultValidator();
 
         vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
-        bytes memory uptimeMessage =
-            ValidatorMessages.packValidationUptimeMessage(validationID, 0);
+        bytes memory uptimeMessage = ValidatorMessages.packValidationUptimeMessage(validationID, 0);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -210,7 +215,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         app.submitUptimeProof(validationID, 0);
     }
 
-     function testSubmitUptimes() public {
+    function testSubmitUptimes() public {
         bytes32 validationID = _registerDefaultValidator();
 
         bytes32 nextValidationID = _registerValidator({
@@ -223,9 +228,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         });
 
         vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
-        
-        bytes memory uptimeMessage0 =
-            ValidatorMessages.packValidationUptimeMessage(validationID, DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+
+        bytes memory uptimeMessage0 = ValidatorMessages.packValidationUptimeMessage(
+            validationID, DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION
+        );
 
         vm.mockCall(
             WARP_PRECOMPILE_ADDRESS,
@@ -243,8 +249,9 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
             WARP_PRECOMPILE_ADDRESS, abi.encodeCall(IWarpMessenger.getVerifiedWarpMessage, 0)
         );
 
-        bytes memory uptimeMessage1 =
-            ValidatorMessages.packValidationUptimeMessage(nextValidationID, DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+        bytes memory uptimeMessage1 = ValidatorMessages.packValidationUptimeMessage(
+            nextValidationID, DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION
+        );
 
         vm.mockCall(
             WARP_PRECOMPILE_ADDRESS,
@@ -263,11 +270,11 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         );
 
         bytes32[] memory validationIDs = new bytes32[](2);
-        validationIDs[0] = validationID; 
+        validationIDs[0] = validationID;
         validationIDs[1] = nextValidationID;
 
         uint32[] memory messageIndexes = new uint32[](2);
-        messageIndexes[0] = 0; 
+        messageIndexes[0] = 0;
         messageIndexes[1] = 1;
 
         vm.prank(DEFAULT_UPTIME_KEEPER);
@@ -277,17 +284,15 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
     function testSubmitUptimesInvalidInput() public {
         bytes32 validationID = _registerDefaultValidator();
         bytes32[] memory validationIDs = new bytes32[](1);
-        validationIDs[0] = validationID; 
+        validationIDs[0] = validationID;
 
         uint32[] memory messageIndexes = new uint32[](2);
-        messageIndexes[0] = 0; 
-        messageIndexes[1] = 1; 
+        messageIndexes[0] = 0;
+        messageIndexes[1] = 1;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Native721TokenStakingManager.InvalidInputLengths.selector, 1, 2
-            )
-        ); 
+            abi.encodeWithSelector(Native721TokenStakingManager.InvalidInputLengths.selector, 1, 2)
+        );
         vm.prank(DEFAULT_UPTIME_KEEPER);
         app.submitUptimeProofs(validationIDs, messageIndexes);
     }
@@ -311,10 +316,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         );
 
         vm.warp(3 * DEFAULT_EPOCH_DURATION);
-        app.cancelRewards(true, 0, address(rewardToken));    
+        app.cancelRewards(true, 0, address(rewardToken));
     }
 
-     function testRewardCancellationNonOwner() public {
+    function testRewardCancellationNonOwner() public {
         vm.expectRevert(
             abi.encodeWithSelector(
                 OwnableUpgradeable.OwnableUnauthorizedAccount.selector, DEFAULT_DELEGATOR_ADDRESS
@@ -326,8 +331,8 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
     }
 
     function testCancelRewards() public {
-        app.cancelRewards(true, 0, address(rewardToken));    
-        app.cancelRewards(false, 0, address(rewardToken));    
+        app.cancelRewards(true, 0, address(rewardToken));
+        app.cancelRewards(false, 0, address(rewardToken));
     }
 
     function testDelegatorNFTRemoval() public {
@@ -379,7 +384,8 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         _resolveRewards(delegationIDs);
 
         (uint256 validatorReward, uint256 delegatorReward) = _calculateExpectedRewards(
-            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS);
+            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS
+        );
 
         _claimReward(true, address(this), validatorReward);
         _claimReward(true, DEFAULT_DELEGATOR_ADDRESS, delegatorReward);
@@ -417,24 +423,28 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         _resolveRewards(delegationIDs);
 
         (uint256 validatorReward, uint256 delegatorReward) = _calculateExpectedRewards(
-            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS);
-
+            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS
+        );
 
         uint256 balanceBefore = rewardToken.balanceOf(DEFAULT_DELEGATOR_ADDRESS);
-        
+
         address[] memory tokens = new address[](2);
         tokens[0] = address(rewardToken);
         tokens[1] = address(rewardToken);
-        
+
         vm.prank(DEFAULT_DELEGATOR_ADDRESS);
         vm.warp(block.timestamp + REWARD_CLAIM_DELAY);
 
         app.claimRewards(true, 0, tokens, DEFAULT_DELEGATOR_ADDRESS);
 
-        assertApproxEqRel(delegatorReward, rewardToken.balanceOf(DEFAULT_DELEGATOR_ADDRESS) - balanceBefore, 0.1e18);
+        assertApproxEqRel(
+            delegatorReward,
+            rewardToken.balanceOf(DEFAULT_DELEGATOR_ADDRESS) - balanceBefore,
+            0.1e18
+        );
     }
 
-     function testRewardsTooEarly() public {
+    function testRewardsTooEarly() public {
         bytes32 validationID = _registerDefaultValidator();
 
         _endValidationWithChecks({
@@ -450,17 +460,18 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         vm.warp(DEFAULT_EPOCH_DURATION);
         _submitUptime(validationID, DEFAULT_COMPLETION_TIMESTAMP - DEFAULT_REGISTRATION_TIMESTAMP);
 
-
         address[] memory tokens = new address[](1);
         tokens[0] = address(rewardToken);
-        
+
         vm.expectRevert(
             abi.encodeWithSelector(
-                Native721TokenStakingManager.TooEarly.selector, block.timestamp, DEFAULT_EPOCH_DURATION + REWARD_CLAIM_DELAY
+                Native721TokenStakingManager.TooEarly.selector,
+                block.timestamp,
+                DEFAULT_EPOCH_DURATION + REWARD_CLAIM_DELAY
             )
         );
         app.claimRewards(true, 0, tokens, address(this));
-    }    
+    }
 
     function testDelegationRewardsForSameValidatorAndDelegator() public {
         bytes32 validationID = _registerDefaultValidator();
@@ -503,7 +514,8 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         _resolveRewards(delegationIDs);
 
         (uint256 validatorReward, uint256 delegatorReward) = _calculateExpectedRewards(
-            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS);
+            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS
+        );
 
         _claimReward(true, address(this), validatorReward + delegatorReward);
     }
@@ -531,7 +543,6 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         _expectNFTStakeUnlock(DEFAULT_DELEGATOR_ADDRESS, 1);
 
-
         vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
         _submitUptime(validationID, DEFAULT_COMPLETION_TIMESTAMP - DEFAULT_REGISTRATION_TIMESTAMP);
 
@@ -539,10 +550,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         delegationIDs[0] = delegationID;
         _resolveRewards(delegationIDs);
 
-        (uint256 validatorReward, uint256 delegatorReward) = _calculateExpectedRewards(
-            1e6, 1e6, DEFAULT_DELEGATION_FEE_BIPS);
+        (uint256 validatorReward, uint256 delegatorReward) =
+            _calculateExpectedRewards(1e6, 1e6, DEFAULT_DELEGATION_FEE_BIPS);
 
-        _claimReward(false, address(this), validatorReward );
+        _claimReward(false, address(this), validatorReward);
         _claimReward(false, DEFAULT_DELEGATOR_ADDRESS, delegatorReward);
     }
 
@@ -598,7 +609,8 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         _resolveRewards(delegationIDs);
 
         (uint256 validatorReward, uint256 delegatorReward) = _calculateExpectedRewards(
-            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT * 2, DEFAULT_DELEGATION_FEE_BIPS);
+            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT * 2, DEFAULT_DELEGATION_FEE_BIPS
+        );
 
         _claimReward(true, address(this), validatorReward);
         _claimReward(true, DEFAULT_DELEGATOR_ADDRESS, delegatorReward);
@@ -647,14 +659,15 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         _resolveRewards(delegationIDs);
 
         (uint256 validatorReward, uint256 delegatorReward) = _calculateExpectedRewards(
-            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS);
+            DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS
+        );
 
         _claimReward(true, address(this), validatorReward);
         _claimReward(true, DEFAULT_DELEGATOR_ADDRESS, delegatorReward);
 
-        (validatorReward, delegatorReward) = _calculateExpectedRewards(
-            1e6, 1e6, DEFAULT_DELEGATION_FEE_BIPS);
-        
+        (validatorReward, delegatorReward) =
+            _calculateExpectedRewards(1e6, 1e6, DEFAULT_DELEGATION_FEE_BIPS);
+
         _claimReward(false, address(this), validatorReward);
         _claimReward(false, DEFAULT_DELEGATOR_ADDRESS, delegatorReward);
     }
@@ -723,12 +736,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         });
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                StakingManager.UnlockDurationNotPassed.selector, block.timestamp
-            )
+            abi.encodeWithSelector(StakingManager.UnlockDurationNotPassed.selector, block.timestamp)
         );
         vm.prank(DEFAULT_DELEGATOR_ADDRESS);
-        app.completeNFTDelegatorRemoval(delegationID); 
+        app.completeNFTDelegatorRemoval(delegationID);
     }
 
     function testRevertDoubleCompletion() public {
@@ -755,13 +766,9 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         _completeNFTDelegatorRemoval(DEFAULT_DELEGATOR_ADDRESS, delegationID);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                StakingManager.InvalidDelegatorStatus.selector, 4
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(StakingManager.InvalidDelegatorStatus.selector, 4));
         vm.prank(DEFAULT_DELEGATOR_ADDRESS);
-        app.completeNFTDelegatorRemoval(delegationID); 
+        app.completeNFTDelegatorRemoval(delegationID);
     }
 
     function testEndNFTDelegationRevertBeforeMinStakeDuration() public {
@@ -780,10 +787,8 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
     }
 
     function testValidationRegistrationWithoutNFT() public {
-         vm.expectRevert(
-            abi.encodeWithSelector(
-                Native721TokenStakingManager.InvalidNFTAmount.selector, 0
-            )
+        vm.expectRevert(
+            abi.encodeWithSelector(Native721TokenStakingManager.InvalidNFTAmount.selector, 0)
         );
         uint256[] memory tokens = new uint256[](0);
         app.initiateValidatorRegistration{value: DEFAULT_MINIMUM_STAKE_AMOUNT}({
@@ -813,16 +818,11 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         });
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                StakingManager.UnauthorizedOwner.selector, address(42)
-            )
+            abi.encodeWithSelector(StakingManager.UnauthorizedOwner.selector, address(42))
         );
-        _initiateNFTDelegatorRemoval({
-            delegatorAddress: address(42),
-            delegationID: delegationID
-        });
+        _initiateNFTDelegatorRemoval({delegatorAddress: address(42), delegationID: delegationID});
     }
- 
+
     // Helpers
     function _calculateExpectedRewards(
         uint256 validatorStake,
@@ -830,8 +830,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         uint256 delegationFeeBips
     ) internal pure returns (uint256 validatorReward, uint256 delegatorReward) {
         uint256 feeWeight = delegatorStake * delegationFeeBips / 10000;
-        delegatorReward = (REWARD_PER_EPOCH * (delegatorStake - feeWeight)) / (delegatorStake + validatorStake);
-        validatorReward = (REWARD_PER_EPOCH * (validatorStake + feeWeight)) / (delegatorStake + validatorStake);
+        delegatorReward =
+            (REWARD_PER_EPOCH * (delegatorStake - feeWeight)) / (delegatorStake + validatorStake);
+        validatorReward =
+            (REWARD_PER_EPOCH * (validatorStake + feeWeight)) / (delegatorStake + validatorStake);
     }
 
     function _registerNFTDelegation(
@@ -943,19 +945,22 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         assertEq(stakingToken.balanceOf(account), amount);
     }
 
-    function _expectRewardIssuance(address account, uint256 amount) internal override {
-    }
+    function _expectRewardIssuance(address account, uint256 amount) internal override {}
 
-    function _claimReward(bool primary, address account, uint256 expectedAmount) internal returns (uint256) {
+    function _claimReward(
+        bool primary,
+        address account,
+        uint256 expectedAmount
+    ) internal returns (uint256) {
         uint256 balanceBefore = rewardToken.balanceOf(account);
-        
+
         address[] memory tokens = new address[](1);
         tokens[0] = address(rewardToken);
-        
+
         vm.prank(account);
         vm.warp(block.timestamp + REWARD_CLAIM_DELAY);
         app.claimRewards(primary, 0, tokens, account);
-        
+
         assertApproxEqRel(expectedAmount, rewardToken.balanceOf(account) - balanceBefore, 0.1e18);
     }
 
@@ -968,7 +973,9 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         app.submitUptimeProof(validationID, 0);
     }
 
-    function _resolveRewards(bytes32[] memory delegationIDs) internal {
+    function _resolveRewards(
+        bytes32[] memory delegationIDs
+    ) internal {
         vm.prank(DEFAULT_UPTIME_KEEPER);
         app.resolveRewards(delegationIDs);
     }
@@ -1000,7 +1007,9 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         return validatorManager;
     }
 
-    function _getStakeAssetBalance(address account) internal view override returns (uint256) {
+    function _getStakeAssetBalance(
+        address account
+    ) internal view override returns (uint256) {
         return account.balance;
     }
 }

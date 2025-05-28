@@ -43,7 +43,6 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
     uint64 public constant DEFAULT_UNLOCK_DURATION = 21 days;
     address public constant DEFAULT_UPTIME_KEEPER = address(0xabc);
 
-
     StakingManager public stakingManager;
     IRewardCalculator public rewardCalculator;
 
@@ -263,7 +262,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         );
         _initiateDelegatorRegistration(
             validationID,
-            DEFAULT_DELEGATOR_ADDRESS, 
+            DEFAULT_DELEGATOR_ADDRESS,
             _valueToWeight(DEFAULT_MINIMUM_DELEGATION_AMOUNT / 10)
         );
     }
@@ -376,13 +375,11 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
             blsPublicKey: DEFAULT_BLS_PUBLIC_KEY,
             registrationTimestamp: DEFAULT_REGISTRATION_TIMESTAMP
         });
-        
+
         _endDefaultValidatorWithChecks(validationID, 2);
 
         vm.expectEmit(true, true, true, true, address(stakingManager));
-        emit CompletedDelegatorRemoval(
-            delegationID, validationID, 0, 0
-        );
+        emit CompletedDelegatorRemoval(delegationID, validationID, 0, 0);
 
         vm.warp(DEFAULT_DELEGATOR_END_DELEGATION_TIMESTAMP);
         vm.prank(DEFAULT_DELEGATOR_ADDRESS);
@@ -391,12 +388,13 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         vm.prank(DEFAULT_DELEGATOR_ADDRESS);
         bytes32 delegationID2 = stakingManager.initiateRedelegation(delegationID, nextValidationID);
 
-        bytes memory setValidatorWeightPayload = ValidatorMessages.packL1ValidatorWeightMessage(
-            nextValidationID, 1, DEFAULT_WEIGHT
-        );
+        bytes memory setValidatorWeightPayload =
+            ValidatorMessages.packL1ValidatorWeightMessage(nextValidationID, 1, DEFAULT_WEIGHT);
 
         _setUpCompleteDelegatorRegistration(
-            delegationID2, DEFAULT_DELEGATOR_COMPLETE_REGISTRATION_TIMESTAMP, setValidatorWeightPayload
+            delegationID2,
+            DEFAULT_DELEGATOR_COMPLETE_REGISTRATION_TIMESTAMP,
+            setValidatorWeightPayload
         );
     }
 
@@ -588,7 +586,9 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         _completeDefaultDelegator(validationID, delegationID);
 
         vm.expectRevert(
-            abi.encodeWithSelector(StakingManager.InvalidDelegatorStatus.selector, DelegatorStatus.Removed)
+            abi.encodeWithSelector(
+                StakingManager.InvalidDelegatorStatus.selector, DelegatorStatus.Removed
+            )
         );
         stakingManager.unlockDelegator(delegationID);
     }
@@ -605,13 +605,11 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
             blsPublicKey: DEFAULT_BLS_PUBLIC_KEY,
             registrationTimestamp: DEFAULT_REGISTRATION_TIMESTAMP
         });
-        
+
         _endDefaultValidatorWithChecks(validationID, 2);
 
         vm.expectEmit(true, true, true, true, address(stakingManager));
-        emit CompletedDelegatorRemoval(
-            delegationID, validationID, 0, 0
-        );
+        emit CompletedDelegatorRemoval(delegationID, validationID, 0, 0);
 
         vm.warp(DEFAULT_DELEGATOR_END_DELEGATION_TIMESTAMP);
         vm.prank(DEFAULT_DELEGATOR_ADDRESS);
@@ -621,7 +619,9 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         bytes32 delegationID2 = stakingManager.initiateRedelegation(delegationID, nextValidationID);
 
         vm.expectRevert(
-            abi.encodeWithSelector(StakingManager.InvalidDelegatorStatus.selector, DelegatorStatus.Removed)
+            abi.encodeWithSelector(
+                StakingManager.InvalidDelegatorStatus.selector, DelegatorStatus.Removed
+            )
         );
         stakingManager.unlockDelegator(delegationID);
     }
@@ -817,7 +817,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         stakingManager.completeDelegatorRegistration(delegationID, 0);
 
         _expectStakeUnlock(DEFAULT_DELEGATOR_ADDRESS, _weightToValue(DEFAULT_DELEGATOR_WEIGHT));
-        
+
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         stakingManager.unlockDelegator(delegationID);
 
@@ -845,9 +845,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
 
         // completeDelegatorRegistration should fall through to _completeDelegatorRemoval and refund the stake
         vm.expectEmit(true, true, true, true, address(stakingManager));
-        emit CompletedDelegatorRemoval(
-            delegationID, validationID, 0, 0
-        );
+        emit CompletedDelegatorRemoval(delegationID, validationID, 0, 0);
 
         uint256 balanceBefore = _getStakeAssetBalance(DEFAULT_DELEGATOR_ADDRESS);
 
@@ -857,7 +855,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         stakingManager.initiateDelegatorRemoval(delegationID, false, 0);
 
         _expectStakeUnlock(DEFAULT_DELEGATOR_ADDRESS, _weightToValue(DEFAULT_DELEGATOR_WEIGHT));
-        
+
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         stakingManager.unlockDelegator(delegationID);
 
@@ -887,9 +885,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         _endDefaultValidatorWithChecks(validationID, 3);
 
         vm.expectEmit(true, true, true, true, address(stakingManager));
-        emit CompletedDelegatorRemoval(
-            delegationID, validationID, 0, 0
-        );
+        emit CompletedDelegatorRemoval(delegationID, validationID, 0, 0);
         uint256 balanceBefore = _getStakeAssetBalance(DEFAULT_DELEGATOR_ADDRESS);
 
         stakingManager.completeDelegatorRemoval(delegationID, 0);
@@ -1084,9 +1080,11 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         _endDefaultValidatorWithChecks(validationID, 1);
 
         vm.expectRevert(
-            abi.encodeWithSelector(StakingManager.InvalidValidatorStatus.selector, ValidatorStatus.Completed)
+            abi.encodeWithSelector(
+                StakingManager.InvalidValidatorStatus.selector, ValidatorStatus.Completed
+            )
         );
-        stakingManager.unlockValidator(validationID); 
+        stakingManager.unlockValidator(validationID);
     }
 
     function testInvalidatedValidatonUnlock() public virtual {
@@ -1109,7 +1107,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         _completeValidatorRemoval(0);
 
         _expectStakeUnlock(address(this), _weightToValue(DEFAULT_WEIGHT));
-        stakingManager.unlockValidator(validationID); 
+        stakingManager.unlockValidator(validationID);
     }
 
     function testCompleteEndValidationWithNonValidatorRewardRecipient() public virtual {
@@ -1193,7 +1191,10 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
 
         vm.expectEmit(true, true, true, true, address(validatorManager));
         emit InitiatedValidatorRemoval(
-            validationID, bytes32(0), DEFAULT_WEIGHT, DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION
+            validationID,
+            bytes32(0),
+            DEFAULT_WEIGHT,
+            DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION
         );
 
         _initiateValidatorRemoval(validationID, false, address(0));
@@ -1262,11 +1263,14 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                StakingManager.MaxWeightExceeded.selector, DEFAULT_WEIGHT + _valueToWeight(delegatorAmount)
+                StakingManager.MaxWeightExceeded.selector,
+                DEFAULT_WEIGHT + _valueToWeight(delegatorAmount)
             )
         );
 
-        _initiateDelegatorRegistration(validationID, DEFAULT_DELEGATOR_ADDRESS, _valueToWeight(delegatorAmount));
+        _initiateDelegatorRegistration(
+            validationID, DEFAULT_DELEGATOR_ADDRESS, _valueToWeight(delegatorAmount)
+        );
     }
 
     function testCompleteDelegatorRegistrationAlreadyRegistered() public {
@@ -1395,7 +1399,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         stakingManager.initiateDelegatorRemoval(delegationID, true, 0);
 
         _expectStakeUnlock(DEFAULT_DELEGATOR_ADDRESS, _weightToValue(DEFAULT_DELEGATOR_WEIGHT));
-        
+
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         stakingManager.unlockDelegator(delegationID);
     }
@@ -1515,12 +1519,9 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         uint256 stakeAmount
     ) internal virtual returns (bytes32);
 
-    function _completeValidatorRegistration(uint32 messageIndex)
-        internal
-        virtual
-        override
-        returns (bytes32)
-    {
+    function _completeValidatorRegistration(
+        uint32 messageIndex
+    ) internal virtual override returns (bytes32) {
         return stakingManager.completeValidatorRegistration(messageIndex);
     }
 
@@ -1537,17 +1538,12 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         bool includeUptime,
         address recipientAddress
     ) internal virtual override {
-        stakingManager.initiateValidatorRemoval(
-            validationID, includeUptime, 0
-        );
+        stakingManager.initiateValidatorRemoval(validationID, includeUptime, 0);
     }
 
-    function _completeValidatorRemoval(uint32 messageIndex)
-        internal
-        virtual
-        override
-        returns (bytes32)
-    {
+    function _completeValidatorRemoval(
+        uint32 messageIndex
+    ) internal virtual override returns (bytes32) {
         return stakingManager.completeValidatorRemoval(messageIndex);
     }
 
@@ -1629,10 +1625,9 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         );
     }
 
-    function _registerDefaultDelegator(bytes32 validationID)
-        internal
-        returns (bytes32 delegationID)
-    {
+    function _registerDefaultDelegator(
+        bytes32 validationID
+    ) internal returns (bytes32 delegationID) {
         return _registerDelegator({
             validationID: validationID,
             delegatorAddress: DEFAULT_DELEGATOR_ADDRESS,
@@ -1644,10 +1639,9 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         });
     }
 
-    function _initiateDefaultDelegatorRegistration(bytes32 validationID)
-        internal
-        returns (bytes32)
-    {
+    function _initiateDefaultDelegatorRegistration(
+        bytes32 validationID
+    ) internal returns (bytes32) {
         return _setUpInitiateDelegatorRegistration({
             validationID: validationID,
             delegatorAddress: DEFAULT_DELEGATOR_ADDRESS,
@@ -1893,7 +1887,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         _completeEndValidation(l1ValidatorRegistrationMessage);
 
         _expectStakeUnlock(validatorOwner, _weightToValue(validatorWeight));
-        
+
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         stakingManager.unlockValidator(validationID);
 
@@ -1915,7 +1909,9 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         }
     }
 
-    function _completeEndValidation(bytes memory l1ValidatorRegistrationMessage) internal {
+    function _completeEndValidation(
+        bytes memory l1ValidatorRegistrationMessage
+    ) internal {
         _mockGetPChainWarpMessage(l1ValidatorRegistrationMessage, true);
         stakingManager.completeValidatorRemoval(0);
     }
@@ -1951,7 +1947,7 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         _completeDelegatorRemoval(delegationID, weightUpdateMessage);
 
         _expectStakeUnlock(delegator, _weightToValue(delegatorWeight));
-        
+
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         stakingManager.unlockDelegator(delegationID);
 
@@ -2027,7 +2023,9 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         });
     }
 
-    function _getStakeAssetBalance(address account) internal virtual returns (uint256);
+    function _getStakeAssetBalance(
+        address account
+    ) internal virtual returns (uint256);
     function _expectStakeUnlock(address account, uint256 amount) internal virtual;
     function _expectRewardIssuance(address account, uint256 amount) internal virtual;
 
