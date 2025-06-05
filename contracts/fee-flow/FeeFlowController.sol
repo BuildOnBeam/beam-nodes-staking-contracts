@@ -101,8 +101,8 @@ contract FeeFlowController is AccessControl {
         priceMultiplier = priceMultiplier_;
         minInitPrice = minInitPrice_;
 
-        grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        grantRole(REWARDS_MANAGER_ROLE, _msgSender());
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _grantRole(REWARDS_MANAGER_ROLE, _msgSender());
     }
 
     /// @dev Allows a user to buy assets by transferring payment tokens and receiving the assets.
