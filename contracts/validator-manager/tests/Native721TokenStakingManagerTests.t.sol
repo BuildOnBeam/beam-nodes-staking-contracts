@@ -823,6 +823,67 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         _initiateNFTDelegatorRemoval({delegatorAddress: address(42), delegationID: delegationID});
     }
 
+    function testRecoverERC20ByOwner() public {
+        // Deploy a new ERC20 token and mint to this test contract
+        ExampleERC20 extraToken = new ExampleERC20();
+        uint256 amount = 1e28;
+
+        // Transfer tokens to the staking manager contract
+        extraToken.transfer(address(app), amount);
+
+        // Check balance before recovery
+        assertEq(extraToken.balanceOf(address(app)), amount);
+        assertEq(extraToken.balanceOf(address(this)), 0);
+
+        // Recover tokens as owner
+        app.recoverERC20(address(extraToken), address(this), amount);
+
+        // Check balances after recovery
+        assertEq(extraToken.balanceOf(address(app)), 0);
+        assertEq(extraToken.balanceOf(address(this)), amount);
+    }
+
+    function testRecoverERC20ByNonOwnerReverts() public {
+        ExampleERC20 extraToken = new ExampleERC20();
+        uint256 amount = 1e28;
+        extraToken.transfer(address(app), amount);
+
+        // Try to recover as a non-owner
+        vm.prank(address(0xBEEF));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(0xBEEF)
+            )
+        );
+        app.recoverERC20(address(extraToken), address(0xBEEF), amount);
+    }
+
+    function testRecoverERC20ZeroAmount() public {
+        ExampleERC20 extraToken = new ExampleERC20();
+        uint256 amount = 1e28;
+        extraToken.transfer(address(app), amount);
+
+        // Recover zero tokens (should not revert, but nothing happens)
+        app.recoverERC20(address(extraToken), address(this), 0);
+
+        // Balance should remain unchanged
+        assertEq(extraToken.balanceOf(address(app)), amount);
+        assertEq(extraToken.balanceOf(address(this)), 0);
+    }
+
+    function testRecoverERC20PartialAmount() public {
+        ExampleERC20 extraToken = new ExampleERC20();
+        uint256 amount = 1e28;
+        extraToken.transfer(address(app), amount);
+
+        // Recover half the tokens
+        uint256 half = amount / 2;
+        app.recoverERC20(address(extraToken), address(this), half);
+
+        assertEq(extraToken.balanceOf(address(app)), amount - half);
+        assertEq(extraToken.balanceOf(address(this)), half);
+    }
+
     // Helpers
     function _calculateExpectedRewards(
         uint256 validatorStake,
