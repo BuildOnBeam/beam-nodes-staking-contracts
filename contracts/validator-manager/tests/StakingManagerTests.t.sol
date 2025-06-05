@@ -1185,9 +1185,11 @@ abstract contract StakingManagerTest is ValidatorManagerTest {
         vm.expectEmit(true, true, true, true, address(stakingManager));
         emit UptimeUpdated(validationID, uptime1, 0);
 
-        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+        vm.warp(DEFAULT_COMPLETION_TIMESTAMP + 1);
         vm.prank(DEFAULT_UPTIME_KEEPER);
         stakingManager.submitUptimeProof(validationID, 0);
+
+        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
 
         vm.expectEmit(true, true, true, true, address(validatorManager));
         emit InitiatedValidatorRemoval(
