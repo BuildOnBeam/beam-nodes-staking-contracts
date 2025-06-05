@@ -6,6 +6,7 @@ import {SafeTransferLib} from "@solmate/utils/SafeTransferLib.sol";
 import {AccessControl} from "@openzeppelin/contracts@5.0.2/access/AccessControl.sol";
 import {INative721TokenStakingManager} from
     "../validator-manager/interfaces/INative721TokenStakingManager.sol";
+import {IRewardsManager} from "../validator-manager/interfaces/IRewardsManager.sol";
 
 /// @title FeeFlowController
 /// @author Euler Labs (https://eulerlabs.com)
@@ -23,7 +24,7 @@ contract FeeFlowController is AccessControl {
     bytes32 public constant REWARDS_MANAGER_ROLE = keccak256("REWARDS_MANAGER_ROLE");
 
     ERC20 public immutable paymentToken;
-    address public immutable paymentReceiver;
+    address public immutable paymentReceiver; // should be RewardsManager
     uint256 public immutable epochPeriod;
     uint256 public immutable priceMultiplier;
     uint256 public immutable minInitPrice;
@@ -135,8 +136,10 @@ contract FeeFlowController is AccessControl {
         if (paymentAmount > maxPaymentTokenAmount) revert MaxPaymentTokenAmountExceeded();
 
         if (paymentAmount > 0) {
-            /// PATCH: register secondary rewards
-            // transfer payment tokens to auction contract
+            /// PATCH: register secondary rewards via RewardsManager
+            /// FeeFlow needs to have REWARDS_MANAGER_ROLE granted to it
+
+            // transfer payment tokens from buyer to auction contract
             paymentToken.safeTransferFrom(sender, address(this), paymentAmount);
 
             // get *next* epoch
@@ -144,11 +147,14 @@ contract FeeFlowController is AccessControl {
                 INative721TokenStakingManager(paymentReceiver);
             uint64 nextEpoch = stakingManager.getEpoch() + 1;
 
-            // approve payment tokens to staking manager contract
+            // approve payment tokens to RewardsManager contract
             ERC20(paymentToken).approve(paymentReceiver, paymentAmount);
 
-            // register secondary rewards for next epoch
-            stakingManager.registerRewards(false, nextEpoch, address(paymentToken), paymentAmount);
+            // register secondary rewards for next epoch via RewardsManager
+            IRewardsManager(paymentReceiver).registerSecondaryRewards(
+                nextEpoch, address(paymentToken), paymentAmount
+            );
+            /// END PATCH
         }
 
         for (uint256 i = 0; i < assets.length; ++i) {
