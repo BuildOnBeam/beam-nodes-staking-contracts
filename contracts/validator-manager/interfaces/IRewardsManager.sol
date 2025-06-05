@@ -23,6 +23,11 @@ interface IRewardsManager {
     function registerSecondaryRewards(uint64 epoch, address token, uint256 amount) external;
 
     /**
+     * @notice Shorthand to register secondary rewards for the *next* epoch.
+     */
+    function registerNextSecondaryRewards(address token, uint256 amount) external;
+
+    /**
      * @notice Registers a reward amount for a specific epoch and token.
      * @dev This function acts as a permissioned proxy for {INative721TokenStakingManager-registerRewards}.
      * @param primary A boolean indicating whether to register in the primary reward pool (true) or the NFT pool (false).
