@@ -199,22 +199,6 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         app.registerNFTDelegation(validationID, tokens);
     }
 
-    function testSubmitUptimeNonOwner() public {
-        bytes32 validationID = _registerDefaultValidator();
-
-        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
-        bytes memory uptimeMessage = ValidatorMessages.packValidationUptimeMessage(validationID, 0);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                OwnableUpgradeable.OwnableUnauthorizedAccount.selector, DEFAULT_DELEGATOR_ADDRESS
-            )
-        );
-
-        vm.prank(DEFAULT_DELEGATOR_ADDRESS);
-        app.submitUptimeProof(validationID, 0);
-    }
-
     function testSubmitUptimes() public {
         bytes32 validationID = _registerDefaultValidator();
 
@@ -277,7 +261,12 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         messageIndexes[0] = 0;
         messageIndexes[1] = 1;
 
+        // uptime keeper
         vm.prank(DEFAULT_UPTIME_KEEPER);
+        app.submitUptimeProofs(validationIDs, messageIndexes);
+
+        // any other address
+        vm.prank(DEFAULT_DELEGATOR_ADDRESS);
         app.submitUptimeProofs(validationIDs, messageIndexes);
     }
 
@@ -376,8 +365,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
             rewardRecipient: DEFAULT_DELEGATOR_ADDRESS
         });
 
-        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+        vm.warp(DEFAULT_COMPLETION_TIMESTAMP + 1);
         _submitUptime(validationID, DEFAULT_COMPLETION_TIMESTAMP - DEFAULT_REGISTRATION_TIMESTAMP);
+
+        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
 
         bytes32[] memory delegationIDs = new bytes32[](1);
         delegationIDs[0] = delegationID;
@@ -415,8 +406,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
             rewardRecipient: DEFAULT_DELEGATOR_ADDRESS
         });
 
-        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+        vm.warp(DEFAULT_COMPLETION_TIMESTAMP + 1);
         _submitUptime(validationID, DEFAULT_COMPLETION_TIMESTAMP - DEFAULT_REGISTRATION_TIMESTAMP);
+
+        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
 
         bytes32[] memory delegationIDs = new bytes32[](1);
         delegationIDs[0] = delegationID;
@@ -506,8 +499,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
             rewardRecipient: DEFAULT_DELEGATOR_ADDRESS
         });
 
-        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+        vm.warp(DEFAULT_COMPLETION_TIMESTAMP + 1);
         _submitUptime(validationID, DEFAULT_COMPLETION_TIMESTAMP - DEFAULT_REGISTRATION_TIMESTAMP);
+
+        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
 
         bytes32[] memory delegationIDs = new bytes32[](1);
         delegationIDs[0] = delegationID;
@@ -543,8 +538,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         _expectNFTStakeUnlock(DEFAULT_DELEGATOR_ADDRESS, 1);
 
-        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+        vm.warp(DEFAULT_COMPLETION_TIMESTAMP + 1);
         _submitUptime(validationID, DEFAULT_COMPLETION_TIMESTAMP - DEFAULT_REGISTRATION_TIMESTAMP);
+
+        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
 
         bytes32[] memory delegationIDs = new bytes32[](1);
         delegationIDs[0] = delegationID;
@@ -600,8 +597,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
             rewardRecipient: DEFAULT_DELEGATOR_ADDRESS
         });
 
-        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+        vm.warp(DEFAULT_COMPLETION_TIMESTAMP + 1);
         _submitUptime(validationID, DEFAULT_COMPLETION_TIMESTAMP - DEFAULT_REGISTRATION_TIMESTAMP);
+
+        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
 
         bytes32[] memory delegationIDs = new bytes32[](2);
         delegationIDs[0] = delegationID;
@@ -650,8 +649,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
             rewardRecipient: DEFAULT_DELEGATOR_ADDRESS
         });
 
-        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
+        vm.warp(DEFAULT_COMPLETION_TIMESTAMP + 1);
         _submitUptime(validationID, DEFAULT_COMPLETION_TIMESTAMP - DEFAULT_REGISTRATION_TIMESTAMP);
+
+        vm.warp(DEFAULT_REGISTRATION_TIMESTAMP + DEFAULT_EPOCH_DURATION);
 
         bytes32[] memory delegationIDs = new bytes32[](2);
         delegationIDs[0] = delegationID;
