@@ -12,10 +12,19 @@ contract OverflowableEpochIdFeeFlowController is FeeFlowController {
         uint256 priceMultiplier_,
         uint256 minInitPrice_
     )
-        FeeFlowController(initPrice, paymentToken_, paymentReceiver_, epochPeriod_, priceMultiplier_, minInitPrice_)
+        FeeFlowController(
+            initPrice,
+            paymentToken_,
+            paymentReceiver_,
+            epochPeriod_,
+            priceMultiplier_,
+            minInitPrice_
+        )
     {}
 
-    function setEpochId(uint16 epochId) public {
+    function setEpochId(
+        uint16 epochId
+    ) public {
         slot0.epochId = epochId;
     }
 }

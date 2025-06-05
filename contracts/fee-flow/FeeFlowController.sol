@@ -4,12 +4,13 @@ pragma solidity 0.8.25;
 import {ERC20} from "@solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "@solmate/utils/SafeTransferLib.sol";
 import {AccessControl} from "@openzeppelin/contracts@5.0.2/access/AccessControl.sol";
-import {INative721TokenStakingManager} from "../validator-manager/interfaces/INative721TokenStakingManager.sol";
+import {INative721TokenStakingManager} from
+    "../validator-manager/interfaces/INative721TokenStakingManager.sol";
 
 /// @title FeeFlowController
 /// @author Euler Labs (https://eulerlabs.com)
 /// @notice Continous back to back dutch auctions selling any asset received by this contract
-contract FeeFlowController is AccessControl{
+contract FeeFlowController is AccessControl {
     using SafeTransferLib for ERC20;
 
     uint256 public constant MIN_EPOCH_PERIOD = 1 hours;
@@ -137,9 +138,10 @@ contract FeeFlowController is AccessControl{
             /// PATCH: register secondary rewards
             // transfer payment tokens to auction contract
             paymentToken.safeTransferFrom(sender, address(this), paymentAmount);
-        
+
             // get *next* epoch
-            INative721TokenStakingManager stakingManager = INative721TokenStakingManager(paymentReceiver);
+            INative721TokenStakingManager stakingManager =
+                INative721TokenStakingManager(paymentReceiver);
             uint64 nextEpoch = stakingManager.getEpoch() + 1;
 
             // approve payment tokens to staking manager contract
@@ -192,10 +194,7 @@ contract FeeFlowController is AccessControl{
         uint256 amount
     ) external virtual onlyRole(REWARDS_MANAGER_ROLE) nonReentrant {
         INative721TokenStakingManager(paymentReceiver).registerRewards(
-            primary,
-            epoch,
-            token,
-            amount
+            primary, epoch, token, amount
         );
     }
 
@@ -204,7 +203,9 @@ contract FeeFlowController is AccessControl{
     /// @return price The current price calculated based on the elapsed time and the initial price.
     /// @notice This function calculates the current price by subtracting a fraction of the initial price based on the elapsed time.
     // If the elapsed time exceeds the epoch period, the price will be 0.
-    function getPriceFromCache(Slot0 memory slot0Cache) internal view returns (uint256) {
+    function getPriceFromCache(
+        Slot0 memory slot0Cache
+    ) internal view returns (uint256) {
         uint256 timePassed = block.timestamp - slot0Cache.startTime;
 
         if (timePassed > epochPeriod) {

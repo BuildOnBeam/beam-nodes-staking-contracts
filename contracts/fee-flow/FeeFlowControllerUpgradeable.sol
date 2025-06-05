@@ -3,9 +3,12 @@ pragma solidity 0.8.25;
 
 import {ERC20} from "@solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "@solmate/utils/SafeTransferLib.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable@5.0.2/access/AccessControlUpgradeable.sol";
-import {INative721TokenStakingManager} from "../validator-manager/interfaces/INative721TokenStakingManager.sol";
+import {Initializable} from
+    "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from
+    "@openzeppelin/contracts-upgradeable@5.0.2/access/AccessControlUpgradeable.sol";
+import {INative721TokenStakingManager} from
+    "../validator-manager/interfaces/INative721TokenStakingManager.sol";
 
 /// @title FeeFlowControllerUpgradeable
 /// @author Euler Labs (https://eulerlabs.com)
@@ -144,9 +147,10 @@ contract FeeFlowControllerUpgradeable is Initializable, AccessControlUpgradeable
             /// PATCH: register secondary rewards
             // transfer payment tokens to auction contract
             paymentToken.safeTransferFrom(sender, address(this), paymentAmount);
-        
+
             // get *next* epoch
-            INative721TokenStakingManager stakingManager = INative721TokenStakingManager(paymentReceiver);
+            INative721TokenStakingManager stakingManager =
+                INative721TokenStakingManager(paymentReceiver);
             uint64 nextEpoch = stakingManager.getEpoch() + 1;
 
             // approve payment tokens to staking manager contract
@@ -199,10 +203,7 @@ contract FeeFlowControllerUpgradeable is Initializable, AccessControlUpgradeable
         uint256 amount
     ) external virtual onlyRole(REWARDS_MANAGER_ROLE) nonReentrant {
         INative721TokenStakingManager(paymentReceiver).registerRewards(
-            primary,
-            epoch,
-            token,
-            amount
+            primary, epoch, token, amount
         );
     }
 
@@ -211,7 +212,9 @@ contract FeeFlowControllerUpgradeable is Initializable, AccessControlUpgradeable
     /// @return price The current price calculated based on the elapsed time and the initial price.
     /// @notice This function calculates the current price by subtracting a fraction of the initial price based on the elapsed time.
     // If the elapsed time exceeds the epoch period, the price will be 0.
-    function getPriceFromCache(Slot0 memory slot0Cache) internal view returns (uint256) {
+    function getPriceFromCache(
+        Slot0 memory slot0Cache
+    ) internal view returns (uint256) {
         uint256 timePassed = block.timestamp - slot0Cache.startTime;
 
         if (timePassed > epochPeriod) {

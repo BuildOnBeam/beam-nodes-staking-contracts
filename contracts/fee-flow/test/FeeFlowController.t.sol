@@ -44,7 +44,6 @@ contract FeeFlowControllerTest is Test {
         vm.label(address(token4), "token4");
         tokens.push(token4);
 
-
         // Deploy FeeFlowController
         feeFlowController = new FeeFlowController(
             INIT_PRICE,
@@ -177,7 +176,9 @@ contract FeeFlowControllerTest is Test {
         uint256 expectedPrice = feeFlowController.getPrice();
 
         vm.startPrank(buyer);
-        feeFlowController.buy(assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18);
+        feeFlowController.buy(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18
+        );
         vm.stopPrank();
 
         uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
@@ -208,7 +209,9 @@ contract FeeFlowControllerTest is Test {
         uint256 expectedPrice = feeFlowController.getPrice();
 
         vm.startPrank(buyer);
-        feeFlowController.buy(assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18);
+        feeFlowController.buy(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18
+        );
         vm.stopPrank();
 
         uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
@@ -240,7 +243,9 @@ contract FeeFlowControllerTest is Test {
         uint256 expectedPrice = feeFlowController.getPrice();
 
         vm.startPrank(buyer);
-        feeFlowController.buy(assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18);
+        feeFlowController.buy(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18
+        );
         vm.stopPrank();
 
         uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
@@ -266,7 +271,9 @@ contract FeeFlowControllerTest is Test {
 
         vm.startPrank(buyer);
         vm.expectRevert(FeeFlowController.DeadlinePassed.selector);
-        feeFlowController.buy(assetsAddresses(), assetsReceiver, 0, block.timestamp - 1 days, 1000000e18);
+        feeFlowController.buy(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp - 1 days, 1000000e18
+        );
         vm.stopPrank();
 
         // Double check tokens haven't moved
@@ -278,7 +285,9 @@ contract FeeFlowControllerTest is Test {
 
         vm.startPrank(buyer);
         vm.expectRevert(FeeFlowController.EmptyAssets.selector);
-        feeFlowController.buy(new address[](0), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18);
+        feeFlowController.buy(
+            new address[](0), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18
+        );
         vm.stopPrank();
 
         // Double check tokens haven't moved
@@ -293,7 +302,9 @@ contract FeeFlowControllerTest is Test {
 
         vm.startPrank(buyer);
         vm.expectRevert(FeeFlowController.EpochIdMismatch.selector);
-        feeFlowController.buy(assetsAddresses(), assetsReceiver, epochId, block.timestamp + 1 days, 1000000e18);
+        feeFlowController.buy(
+            assetsAddresses(), assetsReceiver, epochId, block.timestamp + 1 days, 1000000e18
+        );
         vm.stopPrank();
 
         // Double check tokens haven't moved
@@ -305,7 +316,9 @@ contract FeeFlowControllerTest is Test {
 
         vm.startPrank(buyer);
         vm.expectRevert(FeeFlowController.MaxPaymentTokenAmountExceeded.selector);
-        feeFlowController.buy(assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, INIT_PRICE / 2);
+        feeFlowController.buy(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, INIT_PRICE / 2
+        );
         vm.stopPrank();
 
         // Double check tokens haven't moved
@@ -321,7 +334,11 @@ contract FeeFlowControllerTest is Test {
         reenterToken.setReenterTargetAndData(
             address(feeFlowController),
             abi.encodeWithSelector(
-                feeFlowController.buy.selector, assetsAddresses(), assetsReceiver, block.timestamp + 1 days, 1000000e18
+                feeFlowController.buy.selector,
+                assetsAddresses(),
+                assetsReceiver,
+                block.timestamp + 1 days,
+                1000000e18
             )
         );
 
@@ -380,7 +397,12 @@ contract FeeFlowControllerTest is Test {
 
         // Deploy with auction at max init price
         FeeFlowController tempFeeFlowController = new FeeFlowController(
-            absMaxInitPrice, address(paymentToken), paymentReceiver, EPOCH_PERIOD, 1.1e18, absMaxInitPrice
+            absMaxInitPrice,
+            address(paymentToken),
+            paymentReceiver,
+            EPOCH_PERIOD,
+            1.1e18,
+            absMaxInitPrice
         );
 
         // Mint payment tokens to buyer
@@ -390,7 +412,9 @@ contract FeeFlowControllerTest is Test {
         // Approve payment token from buyer to FeeFlowController
         paymentToken.approve(address(tempFeeFlowController), type(uint256).max);
         // Buy
-        tempFeeFlowController.buy(assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, type(uint216).max);
+        tempFeeFlowController.buy(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, type(uint216).max
+        );
         vm.stopPrank();
 
         // Assert new init price
@@ -415,7 +439,11 @@ contract FeeFlowControllerTest is Test {
         vm.startPrank(buyer);
         paymentToken.approve(address(tempFeeFlowController), type(uint256).max);
         tempFeeFlowController.buy(
-            assetsAddresses(), assetsReceiver, type(uint16).max, block.timestamp + 1 days, type(uint256).max
+            assetsAddresses(),
+            assetsReceiver,
+            type(uint16).max,
+            block.timestamp + 1 days,
+            type(uint256).max
         );
         vm.stopPrank();
 
@@ -493,8 +521,9 @@ contract FeeFlowControllerTest is Test {
 
         // Purchase will initialize the next auction and increase the price by its multiplier. Doesn't it revert?
         assert(
-            tempFeeFlowController.buy(assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, type(uint216).max)
-                == absMaxInitPrice
+            tempFeeFlowController.buy(
+                assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, type(uint216).max
+            ) == absMaxInitPrice
         );
         // Its next price should be capped to the maximum init price
         assert(tempFeeFlowController.getPrice() == absMaxInitPrice);
@@ -524,7 +553,9 @@ contract FeeFlowControllerTest is Test {
         return addresses;
     }
 
-    function assetsBalances(address who) public view returns (uint256[] memory result) {
+    function assetsBalances(
+        address who
+    ) public view returns (uint256[] memory result) {
         result = new uint256[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -534,7 +565,9 @@ contract FeeFlowControllerTest is Test {
         return result;
     }
 
-    function assertMintBalances(address who) public {
+    function assertMintBalances(
+        address who
+    ) public {
         uint256[] memory mintAmounts_ = mintAmounts();
         uint256[] memory balances = assetsBalances(who);
 
@@ -543,7 +576,9 @@ contract FeeFlowControllerTest is Test {
         }
     }
 
-    function assert0Balances(address who) public {
+    function assert0Balances(
+        address who
+    ) public {
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256 balance = tokens[i].balanceOf(who);
             assertEq(balance, 0);
