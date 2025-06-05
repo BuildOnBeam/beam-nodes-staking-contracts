@@ -67,15 +67,19 @@ contract RewardsManager is IRewardsManager, AccessControlEnumerable, ReentrancyG
         address token,
         uint256 amount
     ) external virtual onlyRole(REWARDS_MANAGER_ROLE) nonReentrant {
-        // calculate rewards pool distribution
-        uint256 primaryAmount = amount / 5; // 20% of the amount goes to BEAM staking rewards
-        uint256 secondaryAmount = amount - primaryAmount; // 80% of the amount goes to NFT rewards
+        _registerSecondaryRewards(epoch, token, amount);
+    }
 
-        // register rewards
-        _transferRewards(token, amount);
-        _approveRewards(token, amount);
-        _registerRewards(true, epoch, token, primaryAmount);
-        _registerRewards(false, epoch, token, secondaryAmount);
+    /**
+     * @notice See {IRewardsManager-registerNextSecondaryRewards}.
+     */
+    function registerNextSecondaryRewards(
+        address token,
+        uint256 amount
+    ) external virtual onlyRole(REWARDS_MANAGER_ROLE) nonReentrant {
+        _registerSecondaryRewards(
+            INative721TokenStakingManager(stakingManager).getEpoch() + 1, token, amount
+        );
     }
 
     /**
@@ -132,5 +136,21 @@ contract RewardsManager is IRewardsManager, AccessControlEnumerable, ReentrancyG
     ) internal virtual {
         // register the rewards in the staking manager
         INative721TokenStakingManager(stakingManager).registerRewards(primary, epoch, token, amount);
+    }
+
+    function _registerSecondaryRewards(
+        uint64 epoch,
+        address token,
+        uint256 amount
+    ) internal virtual {
+        // calculate rewards pool distribution
+        uint256 primaryAmount = amount / 5; // 20% of the amount goes to BEAM staking rewards
+        uint256 secondaryAmount = amount - primaryAmount; // 80% of the amount goes to NFT rewards
+
+        // register rewards
+        _transferRewards(token, amount);
+        _approveRewards(token, amount);
+        _registerRewards(true, epoch, token, primaryAmount);
+        _registerRewards(false, epoch, token, secondaryAmount);
     }
 }
