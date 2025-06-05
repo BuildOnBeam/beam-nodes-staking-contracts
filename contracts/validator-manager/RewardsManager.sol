@@ -27,8 +27,8 @@ contract RewardsManager is IRewardsManager, AccessControlEnumerable, ReentrancyG
     constructor(address stakingManager_, address weth_, address admin, address rewardManager) {
         stakingManager = stakingManager_;
         weth = weth_;
-        grantRole(DEFAULT_ADMIN_ROLE, admin);
-        grantRole(REWARDS_MANAGER_ROLE, rewardManager);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(REWARDS_MANAGER_ROLE, rewardManager);
     }
 
     /**
@@ -46,9 +46,7 @@ contract RewardsManager is IRewardsManager, AccessControlEnumerable, ReentrancyG
         IWETH(weth).deposit{value: nativeBalance}();
 
         // approve WETH to staking manager
-        if (!IERC20(weth).approve(stakingManager, nativeBalance)) {
-            revert ERC20ApprovalFailed();
-        }
+        _approveRewards(weth, nativeBalance);
 
         // get *next* epoch
         INative721TokenStakingManager _stakingManager =
@@ -56,7 +54,9 @@ contract RewardsManager is IRewardsManager, AccessControlEnumerable, ReentrancyG
         uint64 nextEpoch = _stakingManager.getEpoch() + 1;
 
         // register primary rewards for next epoch
-        _stakingManager.registerRewards(true, nextEpoch, weth, nativeBalance);
+        // - no transfer necessary
+        _approveRewards(weth, nativeBalance);
+        _registerRewards(true, nextEpoch, weth, nativeBalance);
     }
 
     /**
@@ -72,12 +72,10 @@ contract RewardsManager is IRewardsManager, AccessControlEnumerable, ReentrancyG
         uint256 secondaryAmount = amount - primaryAmount; // 80% of the amount goes to NFT rewards
 
         // register rewards
-        INative721TokenStakingManager(stakingManager).registerRewards(
-            true, epoch, token, primaryAmount
-        );
-        INative721TokenStakingManager(stakingManager).registerRewards(
-            false, epoch, token, secondaryAmount
-        );
+        _transferRewards(token, amount);
+        _approveRewards(token, amount);
+        _registerRewards(true, epoch, token, primaryAmount);
+        _registerRewards(false, epoch, token, secondaryAmount);
     }
 
     /**
@@ -89,7 +87,9 @@ contract RewardsManager is IRewardsManager, AccessControlEnumerable, ReentrancyG
         address token,
         uint256 amount
     ) external virtual onlyRole(REWARDS_MANAGER_ROLE) nonReentrant {
-        INative721TokenStakingManager(stakingManager).registerRewards(primary, epoch, token, amount);
+        _transferRewards(token, amount);
+        _approveRewards(token, amount);
+        _registerRewards(primary, epoch, token, amount);
     }
 
     /**
@@ -110,5 +110,27 @@ contract RewardsManager is IRewardsManager, AccessControlEnumerable, ReentrancyG
         address newOwner
     ) external virtual onlyRole(DEFAULT_ADMIN_ROLE) {
         IOwnable(stakingManager).transferOwnership(newOwner);
+    }
+
+    function _transferRewards(address token, uint256 amount) internal virtual {
+        // transfer the reward token from the sender to this contract
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
+    }
+
+    function _approveRewards(address token, uint256 amount) internal virtual {
+        // approve the staking manager to transfer the reward manager's tokens
+        if (!IERC20(token).approve(stakingManager, amount)) {
+            revert ERC20ApprovalFailed();
+        }
+    }
+
+    function _registerRewards(
+        bool primary,
+        uint64 epoch,
+        address token,
+        uint256 amount
+    ) internal virtual {
+        // register the rewards in the staking manager
+        INative721TokenStakingManager(stakingManager).registerRewards(primary, epoch, token, amount);
     }
 }
