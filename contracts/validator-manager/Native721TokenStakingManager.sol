@@ -696,7 +696,7 @@ contract Native721TokenStakingManager is
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         uint64 uptime = _validateUptime(validationID, messageIndex);
-        uint64 epoch = getEpoch() - 1;
+        uint64 epoch = getEpoch();
         uint64 dur = $._epochDuration;
 
         PoSValidatorInfo storage validatorInfo = $._posValidatorInfo[validationID];
