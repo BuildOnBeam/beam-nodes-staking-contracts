@@ -43,7 +43,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
     uint256 testTokenID = 0;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         ValidatorManagerTest.setUp();
 
         _setUp();

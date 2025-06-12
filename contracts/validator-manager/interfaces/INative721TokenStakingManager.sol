@@ -204,4 +204,9 @@ interface INative721TokenStakingManager is IStakingManager {
      * @notice Returns the ERC721 token contract used for staking
      */
     function erc721() external view returns (IERC721);
+
+    /**
+     * @notice Returns the current reward epoch
+     */
+    function getEpoch() external view returns (uint64);
 }

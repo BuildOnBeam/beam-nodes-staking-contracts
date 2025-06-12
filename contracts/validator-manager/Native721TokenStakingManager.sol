@@ -437,7 +437,10 @@ contract Native721TokenStakingManager is
      */
     function _reward(address account, uint256 amount) internal virtual override {}
 
-    function _getEpoch() internal view virtual returns (uint64) {
+    /**
+     * @notice See {INative721TokenStakingManager-getEpoch}.
+     */
+    function getEpoch() public view virtual returns (uint64) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         return uint64((block.timestamp + $._epochOffset) / $._epochDuration);
     }
@@ -693,7 +696,7 @@ contract Native721TokenStakingManager is
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         uint64 uptime = _validateUptime(validationID, messageIndex);
-        uint64 epoch = _getEpoch();
+        uint64 epoch = getEpoch() - 1;
         uint64 dur = $._epochDuration;
 
         PoSValidatorInfo storage validatorInfo = $._posValidatorInfo[validationID];
@@ -740,7 +743,7 @@ contract Native721TokenStakingManager is
             revert OwnableUnauthorizedAccount(_msgSender());
         }
 
-        uint64 epoch = _getEpoch() - 1;
+        uint64 epoch = getEpoch() - 1;
         uint64 dur = $._epochDuration;
 
         for (uint256 i = 0; i < delegationIDs.length; i++) {
