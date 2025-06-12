@@ -136,7 +136,7 @@ contract FeeFlowController {
             paymentToken.safeTransferFrom(sender, address(this), paymentAmount);
 
             // approve payment tokens to RewardsManager contract
-            ERC20(paymentToken).approve(paymentReceiver, paymentAmount);
+            paymentToken.approve(paymentReceiver, paymentAmount);
 
             // register secondary rewards for next epoch via RewardsManager
             IRewardsManager(paymentReceiver).registerNextSecondaryRewards(
