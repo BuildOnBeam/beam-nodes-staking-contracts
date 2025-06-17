@@ -15,7 +15,7 @@ import {console} from "forge-std/console.sol";
  *      source .env
  *      set +a
  *    ```
- * 2. Run the script with forge (update the RPC URL as needed):
+ * 2. Run the script with forge (update the RPC URL and PK as needed):
  *    ```bash
  *    # Dry run (simulation)
  *    forge script contracts/validator-manager/scripts/DeployStakingManagerImplementation.s.sol --rpc-url https://build.onbeam.com/rpc/testnet --slow --optimize --optimizer-runs 200 -vvvvv --private-key $PK_TESTNET

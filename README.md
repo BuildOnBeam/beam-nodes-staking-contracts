@@ -369,7 +369,7 @@ function registerRewards(
 
 Note: The unlock period is enforced to ensure security and prevent certain types of attacks.
 
-## Upgrading contracts via Safe multisg
+## Upgrading contracts via Safe multisig
 
 Upgrading the StakingManager or ValidatorManager via a Safe multisig is a two-step process:
 
@@ -378,9 +378,9 @@ Upgrading the StakingManager or ValidatorManager via a Safe multisig is a two-st
 First we need to know what _kind_ of changes we're deploying:
 
 - If only _function calls_ have been changed, and _contract settings_ don't need to be updated, we don't need to re-initialize the contracts
-- If settings **do** need to be changed, make sure to update the respective contract's `initialize` method and increment the number in `reinitializer(n)`
+- If settings **do** need to be changed, make sure to update the respective contract's `initialize` method and increment the number in the `reinitializer(n)` modifier
 
-Then the new implementation can deployed using the commands documented in the deploy scripts (you may need to update the RPC URL):
+Then the new implementation can deployed using the commands documented in the deploy scripts (you may need to update the RPC URL and keys):
 
 - StakingManager: `./contracts/validator-manager/scripts/DeployStakingManagerImplementation.s.sol`
 - ValidatorManager: `./contracts/validator-manager/scripts/DeployValidatorManagerImplementation.s.sol`
@@ -397,7 +397,7 @@ In the transaction builder we need to supply the following values:
 - parameters:
   - _proxy (address)_: the StakingManager or ValidatorManager Proxy you're upgrading
   - _implementation (address)_: the new implementation contract we've deployed in step one
-  - _data (bytes)_: set to "0x" if the contract settings stay unchanged
+  - _data (bytes)_: set to "0x" if the contract settings should stay unchanged
 
 If the settings **do** need to be changed, you need to find the corresponding script for your contract and network here: `./contracts/validator-manager/scripts/Generate[Staking|Validator]ManagerData[Testnet].s.sol`.
 
