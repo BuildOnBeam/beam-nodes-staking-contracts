@@ -36,7 +36,7 @@ contract UpgradeValidatorManager is Script {
     bytes32 private constant _SUBNET_ID =
         bytes32(hex"398f2502fdf00ea7aa2756ebce5f608d4b59b9af3cd577c4910d3bfce1fdf1b5"); // convert your SubnetID to hex using avatools.io
     uint64 private constant _CHURN_PERIOD = 0 days;
-    uint8 private constant _MAX_CHURN_PERCENTAGE = 20;
+    uint8 private constant _MAX_CHURN_PERCENTAGE = 100;
 
     function run() external {
         // Start broadcasting transactions
