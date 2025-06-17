@@ -49,7 +49,7 @@ contract DeployValidatorManager is Script {
     bytes32 private constant _SUBNET_ID =
         bytes32(hex"5e8b6e2e8155e93739f2fa6a7f8a32c6bb2e1dce2e471b56dcc60aac49bf3435"); // mainnet
     uint64 private constant _CHURN_PERIOD = 1 hours;
-    uint8 private constant _MAX_CHURN_PERCENTAGE = 20;
+    uint8 private constant _MAX_CHURN_PERCENTAGE = 100;
 
     function run() external {
         // Start broadcasting transactions
