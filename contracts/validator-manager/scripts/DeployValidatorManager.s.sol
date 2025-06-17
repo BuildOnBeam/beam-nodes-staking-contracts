@@ -45,6 +45,7 @@ contract DeployValidatorManager is Script {
     // uint64 private constant _CHURN_PERIOD = 1 hours;
     // uint8 private constant _MAX_CHURN_PERCENTAGE = 20;
 
+    // testnet
     address private constant _ADMIN_ADDRESS = address(0xd68F802fD0B6f56524F379805DD8FcC152DB9d5c); // Replace with admin address
     bytes32 private constant _SUBNET_ID =
         bytes32(hex"5e8b6e2e8155e93739f2fa6a7f8a32c6bb2e1dce2e471b56dcc60aac49bf3435"); // mainnet

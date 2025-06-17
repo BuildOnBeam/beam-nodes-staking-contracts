@@ -142,7 +142,7 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
 
     function initialize(
         ValidatorManagerSettings calldata settings
-    ) external initializer {
+    ) external reinitializer(3) {
         __ValidatorManager_init(settings);
     }
 

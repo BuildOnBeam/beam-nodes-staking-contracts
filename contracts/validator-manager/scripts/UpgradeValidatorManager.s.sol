@@ -28,14 +28,16 @@ import {console} from "forge-std/console.sol";
  *    ```
  */
 contract UpgradeValidatorManager is Script {
+    // testnet
+
     // Hardcoded addresses
-    address private constant _PROXY_ADDRESS = address(0xfAcadE0000000000000000000000000000000000); // Replace with actual proxy address
+    address private constant _PROXY_ADDRESS = address(0x33B9785E20ec582d5009965FB3346F1716e8A423); // Replace with actual proxy address
 
     // Example initialization parameters - adjust as needed
-    address private constant _ADMIN_ADDRESS = address(0xa02d3B70696a4c0dB5DE93eF6C68eFf37a6A7eE1); // Replace with admin address
+    address private constant _ADMIN_ADDRESS = address(0xF4B5869AabE19a106C0df25E1537d855b54EEcBD); // Replace with admin address
     bytes32 private constant _SUBNET_ID =
-        bytes32(hex"398f2502fdf00ea7aa2756ebce5f608d4b59b9af3cd577c4910d3bfce1fdf1b5"); // convert your SubnetID to hex using avatools.io
-    uint64 private constant _CHURN_PERIOD = 0 days;
+        bytes32(hex"5e8b6e2e8155e93739f2fa6a7f8a32c6bb2e1dce2e471b56dcc60aac49bf3435"); // convert your SubnetID to hex using avatools.io
+    uint64 private constant _CHURN_PERIOD = 1 hours;
     uint8 private constant _MAX_CHURN_PERCENTAGE = 20;
 
     function run() external {
