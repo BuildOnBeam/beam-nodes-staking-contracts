@@ -15,7 +15,7 @@ import {ValidatorManager} from "../ValidatorManager.sol";
  * 2. Run the script with forge:
  *    ```bash
  *    # Generate initialization data
- *    forge script contracts/validator-manager/scripts/GenerateStakingManagerDataTestnet.s.sol --slow --optimize --optimizer-runs 200 -vvv ----rpc-url https://build.onbeam.com/rpc/testnet
+ *    forge script contracts/validator-manager/scripts/GenerateStakingManagerDataTestnet.s.sol --slow --optimize --optimizer-runs 200 -vvv --rpc-url https://build.onbeam.com/rpc/testnet
  *    ```
  * 3. Manually upgrade the proxy using ProxyAdmin, by calling `upgradeAndCall(stakingManagerProxy, newImplementation, generatedData)`
  */
