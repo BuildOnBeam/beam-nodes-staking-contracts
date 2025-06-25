@@ -27,7 +27,7 @@ contract GenerateStakingManagerData is Script {
 
     // settings:
     address constant NFT_TOKEN_ADDRESS = address(0x2CB343FAD3a2221824E9E4137b636C31300A8BF0);
-    address constant ADMIN_ADDRESS = address(0x277280e8337E64a3A8E8b795D4E8E5e00BF6e203);
+    address constant ADMIN_ADDRESS = address(0xACb1492eaE72c8e2Cc02BB31C592FECcCC6d1853);
     address constant VALIDATOR_MANAGER_ADDRESS = address(0x46d5a1B62095cE9497C6Cc7Ab1BDb8a09D7e3c36);
     uint64 constant MINIMUM_STAKE_DURATION = 1 hours;
     uint256 constant MINIMUM_STAKE_AMOUNT = 20_000e18;
