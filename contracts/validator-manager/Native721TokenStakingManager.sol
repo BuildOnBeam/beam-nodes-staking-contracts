@@ -93,7 +93,7 @@ contract Native721TokenStakingManager is
     function initialize(
         StakingManagerSettings calldata settings,
         IERC721 stakingToken
-    ) external reinitializer(3) {
+    ) external reinitializer(10) {
         __Ownable_init(settings.admin);
         __StakingManager_init(settings);
 
