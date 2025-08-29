@@ -435,7 +435,7 @@ contract Native721TokenStakingManager is
      * @notice See {StakingManager-_reward}
      * @dev Distributes ERC20 rewards to stakers
      */
-    function _reward(address account, uint256 amount) internal virtual override {}
+    function _reward(address, /*account*/ uint256 /*amount*/ ) internal virtual override {}
 
     /**
      * @notice See {INative721TokenStakingManager-getEpoch}.
@@ -486,7 +486,6 @@ contract Native721TokenStakingManager is
         }
 
         // Lock the stake in the contract.
-        uint64 weight = valueToWeight(_lock(stakeAmount));
         _lockNFTs(tokenIDs);
 
         bytes32 validationID = $._manager.initiateValidatorRegistration({
@@ -495,12 +494,10 @@ contract Native721TokenStakingManager is
             registrationExpiry: registrationExpiry,
             remainingBalanceOwner: remainingBalanceOwner,
             disableOwner: disableOwner,
-            weight: weight
+            weight: valueToWeight(_lock(stakeAmount))
         });
 
-        address owner = _msgSender();
-
-        $._posValidatorInfo[validationID].owner = owner;
+        $._posValidatorInfo[validationID].owner = _msgSender();
         $._posValidatorInfo[validationID].delegationFeeBips = delegationFeeBips;
         $._posValidatorInfo[validationID].minStakeDuration = minStakeDuration;
         $._posValidatorInfo[validationID].uptimeSeconds = 0;
@@ -540,9 +537,7 @@ contract Native721TokenStakingManager is
         // Ensure the validation period is active
         Validator memory validator = $._manager.getValidator(validationID);
         // Check that the validation ID is a PoS validator
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -812,9 +807,7 @@ contract Native721TokenStakingManager is
         bytes32 validationID,
         uint32 messageIndex
     ) internal view returns (uint64) {
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
 
         (WarpMessage memory warpMessage, bool valid) =
             WARP_MESSENGER.getVerifiedWarpMessage(messageIndex);

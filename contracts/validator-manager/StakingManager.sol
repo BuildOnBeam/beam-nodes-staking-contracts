@@ -206,9 +206,7 @@ abstract contract StakingManager is
      * @notice See {IStakingManager-submitUptimeProof}.
      */
     function submitUptimeProof(bytes32 validationID, uint32 messageIndex) external {
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
 
         // Uptime proofs include the absolute number of seconds the validator has been active.
         _updateUptime(validationID, messageIndex);
@@ -220,8 +218,8 @@ abstract contract StakingManager is
      */
     function initiateValidatorRemoval(
         bytes32 validationID,
-        bool includeUptimeProof,
-        uint32 messageIndex
+        bool, /*includeUptimeProof*/
+        uint32 /*messageIndex*/
     ) external {
         _initiatePoSValidatorRemoval(validationID);
     }
@@ -449,9 +447,7 @@ abstract contract StakingManager is
         // Ensure the validation period is active
         Validator memory validator = $._manager.getValidator(validationID);
         // Check that the validation ID is a PoS validator
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -563,9 +559,7 @@ abstract contract StakingManager is
         // Ensure the validation period is active
         Validator memory validator = $._manager.getValidator(validationID);
         // Check that the validation ID is a PoS validator
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -609,8 +603,8 @@ abstract contract StakingManager is
      */
     function initiateDelegatorRemoval(
         bytes32 delegationID,
-        bool includeUptimeProof,
-        uint32 messageIndex
+        bool, /*includeUptimeProof*/
+        uint32 /*messageIndex*/
     ) external {
         _initiateDelegatorRemoval(delegationID);
     }
@@ -723,7 +717,7 @@ abstract contract StakingManager is
 
         // We only expect an ICM message if we haven't received a weight update with a nonce greater than the delegation's ending nonce
         if (
-            $._manager.getValidator(delegator.validationID).status != ValidatorStatus.Completed
+            validator.status != ValidatorStatus.Completed
                 && validator.receivedNonce < delegator.endingNonce
         ) {
             (bytes32 validationID, uint64 nonce) =
@@ -794,9 +788,7 @@ abstract contract StakingManager is
             revert InvalidValidatorStatus(validator.status);
         }
 
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
 
         if (validator.startTime != 0 && block.timestamp < validator.endTime + $._unlockDuration) {
             revert UnlockDurationNotPassed(uint64(block.timestamp));
@@ -842,5 +834,16 @@ abstract contract StakingManager is
     ) internal view returns (bool) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         return $._posValidatorInfo[validationID].owner != address(0);
+    }
+
+    /**
+     * @dev Throws if `_isPoSValidator` returns false
+     */
+    function _checkPoSValidator(
+        bytes32 validationID
+    ) internal view {
+        if (!_isPoSValidator(validationID)) {
+            revert ValidatorNotPoS(validationID);
+        }
     }
 }
