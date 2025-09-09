@@ -4,14 +4,12 @@ Efficient, decentralised and MEV resistant mechanism to convert fee assets to a 
 
 Ported from [Euler.xyz's Fee Flow](https://github.com/euler-xyz/fee-flow) for for Beam network by [xtools-at](https://github.com/xtools-at). The original Fee Flow protocol has been audited by Zellic, Ottersec and Team Omega, reports are available [here](https://github.com/euler-xyz/fee-flow/tree/main/audits).
 
-## Changelog
+## Patch Notes
 
-**2025-04-24:**
+**2025-09-09:**
 
 - removed requirement for Euler Vault Connector, since it's not available on Beam, and adjusted tests accordingly.
-- patched `buy` method to set up secondary rewards instead of paying out the price of auctioned tokens to a single recipient.
-- added upgradeable contract variant (Transparent proxy)
-- added AccessControl and proxy-method to register rewards with staking contracts
+- patched `buy` method to unwrap the buyer's WETH and send it to the _paymentReceiver_ (= StakingManager), instead of paying out the price of auctioned tokens directly to a single recipient. This requires the `paymentToken` to be WETH.
 
 ## Protocol Authors
 

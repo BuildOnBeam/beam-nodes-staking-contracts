@@ -3,11 +3,14 @@ pragma solidity 0.8.25;
 
 import {ERC20} from "@solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "@solmate/utils/SafeTransferLib.sol";
-import {IRewardsManager} from "../validator-manager/interfaces/IRewardsManager.sol";
+import {IWETH} from "../validator-manager/interfaces/IWETH.sol";
 
 /// @title FeeFlowController
-/// @author Euler Labs (https://eulerlabs.com)
-/// @notice Continous back to back dutch auctions selling any asset received by this contract
+/// @author Euler Labs (https://eulerlabs.com) / patched by xtools-at for Beam Labs
+/// @notice Continuous back to back dutch auctions selling any asset received by this contract
+
+/// @notice Patched version for Beam PoS, requiring `paymentToken` to be WETH and `paymentReceiver` to be the StakingManager contract
+/// @dev Patch notes: removed Euler `EVCUtil` dependency, changed `buy()` to unwrap WETH and send native tokens to StakingManager
 contract FeeFlowController {
     using SafeTransferLib for ERC20;
 
@@ -19,8 +22,8 @@ contract FeeFlowController {
     uint256 public constant ABS_MAX_INIT_PRICE = type(uint192).max; // chosen so that initPrice * priceMultiplier does not exceed uint256
     uint256 public constant PRICE_MULTIPLIER_SCALE = 1e18;
 
-    ERC20 public immutable paymentToken;
-    address public immutable paymentReceiver; // should be RewardsManager
+    ERC20 public immutable paymentToken; // BEAM: must be WETH
+    address public immutable paymentReceiver; // BEAM: must be StakingManager
     uint256 public immutable epochPeriod;
     uint256 public immutable priceMultiplier;
     uint256 public immutable minInitPrice;
@@ -129,19 +132,18 @@ contract FeeFlowController {
         if (paymentAmount > maxPaymentTokenAmount) revert MaxPaymentTokenAmountExceeded();
 
         if (paymentAmount > 0) {
-            /// PATCH: register secondary rewards via RewardsManager
-            /// FeeFlow requires to have REWARDS_MANAGER_ROLE granted to it
+            /// ORIGINAL CODE:
+            /// paymentToken.safeTransferFrom(sender, paymentReceiver, paymentAmount);
 
-            // transfer payment tokens from buyer to auction contract
+            /// START PATCH: <Beam Labs> send rewards to StakingManager as native currency
+            // transfer WETH from buyer to auction contract
             paymentToken.safeTransferFrom(sender, address(this), paymentAmount);
 
-            // approve payment tokens to RewardsManager contract
-            paymentToken.approve(paymentReceiver, paymentAmount);
+            // unwrap WETH tokens
+            IWETH(address(paymentToken)).withdraw(paymentAmount);
 
-            // register secondary rewards for next epoch via RewardsManager
-            IRewardsManager(paymentReceiver).registerNextSecondaryRewards(
-                address(paymentToken), paymentAmount
-            );
+            // send native tokens to StakingManager
+            SafeTransferLib.safeTransferETH(paymentReceiver, paymentAmount);
             /// END PATCH
         }
 
