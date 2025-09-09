@@ -96,6 +96,14 @@ contract UpgradeBEAMStakingManager is Script {
             epochOffset: EPOCH_OFFSET
         });
 
+        // use empty selector if settings don't change
+        bytes memory noOpSelector;
+
+        // use if settings change and contract needs to be re-initialized
+        bytes memory initSelector = abi.encodeWithSelector(
+            Native721TokenStakingManager.initialize.selector, settings, address(NFT_TOKEN_ADDRESS)
+        );
+
         // Get ProxyAdmin instance
         ProxyAdmin proxyAdmin = ProxyAdmin(_PROXY_ADMIN_ADDRESS);
 
@@ -103,11 +111,7 @@ contract UpgradeBEAMStakingManager is Script {
         proxyAdmin.upgradeAndCall(
             ITransparentUpgradeableProxy(_PROXY_ADDRESS),
             address(newImplementation),
-            abi.encodeWithSelector(
-                Native721TokenStakingManager.initialize.selector,
-                settings,
-                address(NFT_TOKEN_ADDRESS)
-            )
+            noOpSelector // or `initSelector` if settings have changed
         );
         console.log("Upgraded proxy to new implementation");
 

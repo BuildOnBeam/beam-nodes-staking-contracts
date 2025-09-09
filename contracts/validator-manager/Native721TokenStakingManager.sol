@@ -93,7 +93,7 @@ contract Native721TokenStakingManager is
     function initialize(
         StakingManagerSettings calldata settings,
         IERC721 stakingToken
-    ) external reinitializer(3) {
+    ) external reinitializer(10) {
         __Ownable_init(settings.admin);
         __StakingManager_init(settings);
 
@@ -356,6 +356,24 @@ contract Native721TokenStakingManager is
             $._rewardPoolsNFT[epoch][token] = 0;
         }
         emit RewardCancelled(primary, epoch, token);
+    }
+
+    /**
+     * @notice Allows the contract owner to recover ERC20 tokens that may have been accidentally sent to the contract.
+     * @dev This function allows the contract owner to recover ERC20 tokens that may have been accidentally sent to the contract.
+     * @param token The address of the ERC20 token to recover.
+     * @param to The address to which the recovered tokens will be sent.
+     * @param amount The amount of tokens to recover.
+     *
+     * Requirements:
+     * - Only the contract owner can call this function.
+     */
+    function recoverERC20(
+        address token,
+        address to,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
+        IERC20(token).transfer(to, amount);
     }
 
     /**
@@ -677,12 +695,8 @@ contract Native721TokenStakingManager is
     ) internal override returns (uint64) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
-        if ($._uptimeKeeper != _msgSender()) {
-            revert OwnableUnauthorizedAccount(_msgSender());
-        }
-
         uint64 uptime = _validateUptime(validationID, messageIndex);
-        uint64 epoch = getEpoch() - 1;
+        uint64 epoch = getEpoch();
         uint64 dur = $._epochDuration;
 
         PoSValidatorInfo storage validatorInfo = $._posValidatorInfo[validationID];
