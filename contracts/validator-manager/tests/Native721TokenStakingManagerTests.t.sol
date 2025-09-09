@@ -431,7 +431,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         delegationIDs[0] = delegationID;
         _resolveRewards(delegationIDs);
 
-        (uint256 validatorReward, uint256 delegatorReward) = _calculateExpectedRewards(
+        (, uint256 delegatorReward) = _calculateExpectedRewards(
             DEFAULT_WEIGHT, DEFAULT_DELEGATOR_WEIGHT, DEFAULT_DELEGATION_FEE_BIPS
         );
 
@@ -693,8 +693,6 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         bytes32 validationID = _registerDefaultValidator();
         bytes32 delegationID = _registerNFTDelegation(validationID, DEFAULT_DELEGATOR_ADDRESS);
 
-        address rewardRecipient = address(42);
-
         bytes32 nextValidationID = _registerValidator({
             nodeID: _newNodeID(),
             subnetID: DEFAULT_SUBNET_ID,
@@ -713,8 +711,6 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
     function testNFTRedelegationAfterValidatorRemoval() public {
         bytes32 validationID = _registerDefaultValidator();
         bytes32 delegationID = _registerNFTDelegation(validationID, DEFAULT_DELEGATOR_ADDRESS);
-
-        address rewardRecipient = address(42);
 
         bytes32 nextValidationID = _registerValidator({
             nodeID: _newNodeID(),
@@ -930,7 +926,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
     function _initiateNFTDelegatorRemoval(
         address delegatorAddress,
         bytes32 delegationID
-    ) internal virtual returns (bytes32) {
+    ) internal virtual {
         vm.prank(delegatorAddress);
         app.initiateNFTDelegatorRemoval(delegationID);
     }
@@ -938,7 +934,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
     function _completeNFTDelegatorRemoval(
         address delegatorAddress,
         bytes32 delegationID
-    ) internal virtual returns (bytes32) {
+    ) internal virtual {
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         vm.prank(delegatorAddress);
         app.completeNFTDelegatorRemoval(delegationID);
@@ -1025,11 +1021,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
     function _expectRewardIssuance(address account, uint256 amount) internal override {}
 
-    function _claimReward(
-        bool primary,
-        address account,
-        uint256 expectedAmount
-    ) internal returns (uint256) {
+    function _claimReward(bool primary, address account, uint256 expectedAmount) internal {
         uint256 balanceBefore = rewardToken.balanceOf(account);
 
         address[] memory tokens = new address[](1);
