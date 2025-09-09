@@ -30,12 +30,13 @@ import {IERC721Receiver} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC72
 import {Validator, ValidatorStatus, PChainOwner} from "./ACP99Manager.sol";
 import {OwnableUpgradeable} from
     "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
+import {IWETH} from "./interfaces/IWETH.sol";
+
 /**
  * @dev Implementation of the {INative721TokenStakingManager} interface.
  *
  * @custom:security-contact https://github.com/ava-labs/icm-contracts/blob/main/SECURITY.md
  */
-
 contract Native721TokenStakingManager is
     Initializable,
     StakingManager,
@@ -49,6 +50,7 @@ contract Native721TokenStakingManager is
     /// @custom:storage-location erc7201:avalanche-icm.storage.Native721TokenStakingManager
     struct Native721TokenStakingManagerStorage {
         IERC721 _token;
+        IWETH _weth;
     }
     // solhint-enable private-vars-leading-underscore
 
@@ -64,6 +66,7 @@ contract Native721TokenStakingManager is
     error InvalidInputLengths(uint256 inputLength1, uint256 inputLength2);
     error TooEarly(uint256 actualTime, uint256 expectedTime);
     error TooLate(uint256 actualTime, uint256 expectedTime);
+    error NotEnoughTransactionFees();
 
     // solhint-disable ordering
     function _getERC721StakingManagerStorage()
@@ -92,7 +95,8 @@ contract Native721TokenStakingManager is
      */
     function initialize(
         StakingManagerSettings calldata settings,
-        IERC721 stakingToken
+        IERC721 stakingToken,
+        IWETH weth
     ) external reinitializer(10) {
         __Ownable_init(settings.admin);
         __StakingManager_init(settings);
@@ -104,6 +108,7 @@ contract Native721TokenStakingManager is
         }
 
         $._token = stakingToken;
+        $._weth = weth;
     }
 
     function onERC721Received(
@@ -331,6 +336,38 @@ contract Native721TokenStakingManager is
         }
         IERC20(token).transferFrom(_msgSender(), address(this), amount);
         emit RewardRegistered(primary, epoch, token, amount);
+    }
+
+    /**
+     * @notice TODO: See {IRewardsManager-registerTransactionFees}.
+     */
+    function registerTransactionFees() external virtual nonReentrant returns (uint256 amount) {
+        StakingManagerStorage storage $ = _getStakingManagerStorage();
+        Native721TokenStakingManagerStorage storage $$ = _getERC721StakingManagerStorage();
+
+        // revert if contract has low native balance
+        amount = address(this).balance;
+        if (amount < 100 ether) {
+            revert NotEnoughTransactionFees();
+        }
+
+        // TODO: send conversion fee to sender
+        uint256 fee = amount / 10000; // 0.01% fee
+        if (fee != 0) {
+            amount -= fee;
+            payable(_msgSender()).sendValue(fee);
+        }
+
+        // wrap native tokens locked in contract
+        $$._weth.deposit{value: amount}();
+
+        // register primary rewards for next epoch
+        address weth = address($$._weth);
+        uint64 nextEpoch = getEpoch() + 1;
+        $._rewardPools[nextEpoch][weth] += amount;
+        emit RewardRegistered(true, nextEpoch, weth, amount);
+
+        return amount;
     }
 
     /**
