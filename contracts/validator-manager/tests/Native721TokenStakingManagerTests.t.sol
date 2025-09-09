@@ -31,12 +31,15 @@ import {
     WarpMessage,
     IWarpMessenger
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+import {WETH} from "@mocks/WETH.sol";
+import {IWETH} from "../interfaces/IWETH.sol";
 
 contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver {
     Native721TokenStakingManager public app;
 
     ExampleERC721 public stakingToken;
     IERC20 public rewardToken;
+    IWETH weth;
 
     uint128 public constant REWARD_PER_EPOCH = 100e18;
     uint128 public constant REWARD_CLAIM_DELAY = 7 days;
@@ -75,7 +78,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
-        app.initialize(defaultPoSSettings, stakingToken);
+        app.initialize(defaultPoSSettings, stakingToken, weth);
     }
 
     function testInvalidTokenAddress() public {
@@ -88,7 +91,20 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
-        app.initialize(defaultPoSSettings, IERC721(address(0)));
+        app.initialize(defaultPoSSettings, IERC721(address(0)), weth);
+    }
+
+    function testInvalidWethAddress() public {
+        app = new Native721TokenStakingManager(ICMInitializable.Allowed);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Native721TokenStakingManager.InvalidTokenAddress.selector, address(0)
+            )
+        );
+
+        StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
+        defaultPoSSettings.manager = validatorManager;
+        app.initialize(defaultPoSSettings, stakingToken, IWETH(address(0)));
     }
 
     function testZeroMinimumDelegationFee() public {
@@ -98,7 +114,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.minimumDelegationFeeBips = 0;
-        app.initialize(defaultPoSSettings, stakingToken);
+        app.initialize(defaultPoSSettings, stakingToken, weth);
     }
 
     function testMaxMinimumDelegationFee() public {
@@ -113,7 +129,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.minimumDelegationFeeBips = minimumDelegationFeeBips;
-        app.initialize(defaultPoSSettings, stakingToken);
+        app.initialize(defaultPoSSettings, stakingToken, weth);
     }
 
     function testInvalidStakeAmountRange() public {
@@ -128,7 +144,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.minimumStakeAmount = DEFAULT_MAXIMUM_STAKE_AMOUNT;
         defaultPoSSettings.maximumStakeAmount = DEFAULT_MINIMUM_STAKE_AMOUNT;
-        app.initialize(defaultPoSSettings, stakingToken);
+        app.initialize(defaultPoSSettings, stakingToken, weth);
     }
 
     function testZeroWeightToValueFactor() public {
@@ -138,7 +154,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.weightToValueFactor = 0;
-        app.initialize(defaultPoSSettings, stakingToken);
+        app.initialize(defaultPoSSettings, stakingToken, weth);
     }
 
     function testMinStakeDurationTooLow() public {
@@ -153,7 +169,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.minimumStakeDuration = minStakeDuration;
-        app.initialize(defaultPoSSettings, stakingToken);
+        app.initialize(defaultPoSSettings, stakingToken, weth);
     }
 
     function testInvalidValidatorManager() public {
@@ -165,14 +181,14 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         StakingManagerSettings memory settings = _defaultPoSSettings();
         settings.manager = ValidatorManager(address(invalidManager));
-        app.initialize(settings, stakingToken);
+        app.initialize(settings, stakingToken, weth);
     }
 
     function testUnsetValidatorManager() public {
         app = new Native721TokenStakingManager(ICMInitializable.Allowed);
         vm.expectRevert();
 
-        app.initialize(_defaultPoSSettings(), stakingToken); // settings.manager is not set
+        app.initialize(_defaultPoSSettings(), stakingToken, weth); // settings.manager is not set
     }
 
     function testNFTDelegationOverWeightLimit() public {
@@ -1050,6 +1066,8 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         rewardToken = new ExampleERC20();
         stakingToken = new ExampleERC721();
         rewardCalculator = new ExampleRewardCalculator(DEFAULT_REWARD_RATE);
+        WETH _weth = new WETH();
+        weth = IWETH(address(_weth));
 
         stakingToken.setApprovalForAll(address(app), true);
 
@@ -1057,7 +1075,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         defaultPoSSettings.manager = validatorManager;
 
         validatorManager.initialize(_defaultSettings(address(app)));
-        app.initialize(defaultPoSSettings, stakingToken);
+        app.initialize(defaultPoSSettings, stakingToken, weth);
 
         rewardToken.approve(address(app), REWARD_PER_EPOCH * 2);
 

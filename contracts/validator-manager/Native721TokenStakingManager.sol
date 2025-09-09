@@ -103,8 +103,8 @@ contract Native721TokenStakingManager is
 
         Native721TokenStakingManagerStorage storage $ = _getERC721StakingManagerStorage();
 
-        if (address(stakingToken) == address(0)) {
-            revert InvalidTokenAddress(address(stakingToken));
+        if (address(stakingToken) == address(0) || address(weth) == address(0)) {
+            revert InvalidTokenAddress(address(0));
         }
 
         $._token = stakingToken;
