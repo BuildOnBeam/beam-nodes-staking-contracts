@@ -66,7 +66,7 @@ contract Native721TokenStakingManager is
     error InvalidInputLengths(uint256 inputLength1, uint256 inputLength2);
     error TooEarly(uint256 actualTime, uint256 expectedTime);
     error TooLate(uint256 actualTime, uint256 expectedTime);
-    error NotEnoughTransactionFees();
+    error NativeBalanceLow();
 
     // solhint-disable ordering
     function _getERC721StakingManagerStorage()
@@ -339,16 +339,16 @@ contract Native721TokenStakingManager is
     }
 
     /**
-     * @notice See {INative721TokenStakingManager-registerTransactionFees}.
+     * @notice See {INative721TokenStakingManager-registerProtocolRewards}.
      */
-    function registerTransactionFees() external virtual nonReentrant returns (uint256 amount) {
+    function registerProtocolRewards() external virtual nonReentrant returns (uint256 amount) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         Native721TokenStakingManagerStorage storage $$ = _getERC721StakingManagerStorage();
 
         // revert if contract has low native balance
         amount = address(this).balance;
-        if (amount < 100 ether) {
-            revert NotEnoughTransactionFees();
+        if (amount < 1 ether) {
+            revert NativeBalanceLow();
         }
 
         // TODO: send conversion fee to sender

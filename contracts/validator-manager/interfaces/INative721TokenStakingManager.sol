@@ -118,7 +118,7 @@ interface INative721TokenStakingManager is IStakingManager {
     /**
      * @notice Wraps the native tokens held by the contract, and registers them as primary staking rewards for the next epoch with the managed staking contract.
      */
-    function registerTransactionFees() external returns (uint256 amount);
+    function registerProtocolRewards() external returns (uint256 amount);
 
     /**
      * @notice Cancels previously registered rewards before the claim period starts.
