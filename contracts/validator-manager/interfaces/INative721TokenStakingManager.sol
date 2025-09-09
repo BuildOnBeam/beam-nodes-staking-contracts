@@ -116,6 +116,11 @@ interface INative721TokenStakingManager is IStakingManager {
     function registerRewards(bool primary, uint64 epoch, address token, uint256 amount) external;
 
     /**
+     * @notice Wraps the native tokens held by the contract, and registers them as primary staking rewards for the next epoch with the managed staking contract.
+     */
+    function registerTransactionFees() external returns (uint256 amount);
+
+    /**
      * @notice Cancels previously registered rewards before the claim period starts.
      * @dev The function allows the contract owner to withdraw unclaimed rewards if the claim period has not begun.
      * @param primary A boolean indicating whether to cancel from the primary reward pool (true) or the NFT pool (false).

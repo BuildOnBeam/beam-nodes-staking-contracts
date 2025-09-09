@@ -339,7 +339,7 @@ contract Native721TokenStakingManager is
     }
 
     /**
-     * @notice TODO: See {IRewardsManager-registerTransactionFees}.
+     * @notice See {INative721TokenStakingManager-registerTransactionFees}.
      */
     function registerTransactionFees() external virtual nonReentrant returns (uint256 amount) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
