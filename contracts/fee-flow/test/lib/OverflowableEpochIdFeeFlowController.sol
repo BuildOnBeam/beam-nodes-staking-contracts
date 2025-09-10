@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import "../../FeeFlowController.sol";
+import "../../FeeFlowControllerNative.sol";
 
-contract OverflowableEpochIdFeeFlowController is FeeFlowController {
+contract OverflowableEpochIdFeeFlowController is FeeFlowControllerNative {
     constructor(
         uint256 initPrice,
         address paymentToken_,
@@ -12,7 +12,7 @@ contract OverflowableEpochIdFeeFlowController is FeeFlowController {
         uint256 priceMultiplier_,
         uint256 minInitPrice_
     )
-        FeeFlowController(
+        FeeFlowControllerNative(
             initPrice,
             paymentToken_,
             paymentReceiver_,

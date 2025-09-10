@@ -2,14 +2,16 @@
 
 Efficient, decentralised and MEV resistant mechanism to convert fee assets to a single token. Powered by a continuous auto-adjusting Dutch auction mechanism.
 
-Ported from [Euler.xyz's Fee Flow](https://github.com/euler-xyz/fee-flow) for for Beam network by [xtools-at](https://github.com/xtools-at). The original Fee Flow protocol has been audited by Zellic, Ottersec and Team Omega, reports are available [here](https://github.com/euler-xyz/fee-flow/tree/main/audits).
+Ported from [Euler.xyz's Fee Flow](https://github.com/euler-xyz/fee-flow) for Beam Labs by [xtools-at](https://github.com/xtools-at). The original Fee Flow protocol has been audited by Zellic, Ottersec and Team Omega, reports are available [here](https://github.com/euler-xyz/fee-flow/tree/main/audits).
 
-## Patch Notes
+## _Beam Labs_ Patch Notes
 
-**2025-09-09:**
-
-- removed requirement for Euler Vault Connector, since it's not available on Beam, and adjusted tests accordingly.
-- patched `buy` method to unwrap the buyer's WETH and send it to the _paymentReceiver_ (= StakingManager), instead of paying out the price of auctioned tokens directly to a single recipient. This requires the `paymentToken` to be WETH.
+- patched protocol supports payments in native tokens and WETH **only**, payouts are in native tokens
+- introduced new `buyNative` method to support payments in native currency
+- changed `buy` to unwrap paid WETH before sending it to the receiver
+- renamed `paymentToken` constructor argument to `wethAddress` - it MUST be set to the WETH address, or `0x0` to disable ERC20 payments
+- removed requirement for Euler Vault Connector
+- adjusted unit tests accordingly
 
 ## Protocol Authors
 

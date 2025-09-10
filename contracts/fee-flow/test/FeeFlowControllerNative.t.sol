@@ -6,7 +6,7 @@ import "./lib/MockToken.sol";
 import "./lib/ReenteringMockToken.sol";
 import "./lib/PredictAddress.sol";
 import "./lib/OverflowableEpochIdFeeFlowController.sol";
-import "../FeeFlowController.sol";
+import "../FeeFlowControllerNative.sol";
 
 contract FeeFlowControllerTest is Test {
     uint256 public constant INIT_PRICE = 1e18;
@@ -25,7 +25,7 @@ contract FeeFlowControllerTest is Test {
     MockToken token4;
     MockToken[] public tokens;
 
-    FeeFlowController public feeFlowController;
+    FeeFlowControllerNative public feeFlowController;
 
     function setUp() public {
         // Deploy tokens
@@ -45,7 +45,7 @@ contract FeeFlowControllerTest is Test {
         tokens.push(token4);
 
         // Deploy FeeFlowController
-        feeFlowController = new FeeFlowController(
+        feeFlowController = new FeeFlowControllerNative(
             INIT_PRICE,
             address(paymentToken),
             paymentReceiver,
@@ -62,8 +62,8 @@ contract FeeFlowControllerTest is Test {
         vm.stopPrank();
     }
 
-    function testConstructor() public {
-        FeeFlowController.Slot0 memory slot0 = feeFlowController.getSlot0();
+    function testConstructor() public view {
+        FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
         assertEq(slot0.initPrice, uint128(INIT_PRICE));
         assertEq(slot0.startTime, block.timestamp);
         assertEq(address(feeFlowController.paymentToken()), address(paymentToken));
@@ -74,8 +74,8 @@ contract FeeFlowControllerTest is Test {
     }
 
     function testConstructorInitPriceBelowMin() public {
-        vm.expectRevert(FeeFlowController.InitPriceBelowMin.selector);
-        new FeeFlowController(
+        vm.expectRevert(FeeFlowControllerNative.InitPriceBelowMin.selector);
+        new FeeFlowControllerNative(
             MIN_INIT_PRICE - 1,
             address(paymentToken),
             paymentReceiver,
@@ -87,8 +87,8 @@ contract FeeFlowControllerTest is Test {
 
     function testConstructorEpochPeriodBelowMin() public {
         uint256 minEpochPeriod = feeFlowController.MIN_EPOCH_PERIOD();
-        vm.expectRevert(FeeFlowController.EpochPeriodBelowMin.selector);
-        new FeeFlowController(
+        vm.expectRevert(FeeFlowControllerNative.EpochPeriodBelowMin.selector);
+        new FeeFlowControllerNative(
             INIT_PRICE,
             address(paymentToken),
             paymentReceiver,
@@ -100,8 +100,8 @@ contract FeeFlowControllerTest is Test {
 
     function testConstructorEpochPeriodExceedsMax() public {
         uint256 maxEpochPeriod = feeFlowController.MAX_EPOCH_PERIOD();
-        vm.expectRevert(FeeFlowController.EpochPeriodExceedsMax.selector);
-        new FeeFlowController(
+        vm.expectRevert(FeeFlowControllerNative.EpochPeriodExceedsMax.selector);
+        new FeeFlowControllerNative(
             INIT_PRICE,
             address(paymentToken),
             paymentReceiver,
@@ -113,8 +113,8 @@ contract FeeFlowControllerTest is Test {
 
     function testConstructorPriceMultiplierBelowMin() public {
         uint256 minPriceMultiplier = feeFlowController.MIN_PRICE_MULTIPLIER();
-        vm.expectRevert(FeeFlowController.PriceMultiplierBelowMin.selector);
-        new FeeFlowController(
+        vm.expectRevert(FeeFlowControllerNative.PriceMultiplierBelowMin.selector);
+        new FeeFlowControllerNative(
             INIT_PRICE,
             address(paymentToken),
             paymentReceiver,
@@ -126,8 +126,8 @@ contract FeeFlowControllerTest is Test {
 
     function testConstructorMinInitPriceBelowMin() public {
         uint256 absMinInitPrice = feeFlowController.ABS_MIN_INIT_PRICE();
-        vm.expectRevert(FeeFlowController.MinInitPriceBelowMin.selector);
-        new FeeFlowController(
+        vm.expectRevert(FeeFlowControllerNative.MinInitPriceBelowMin.selector);
+        new FeeFlowControllerNative(
             INIT_PRICE,
             address(paymentToken),
             paymentReceiver,
@@ -139,8 +139,8 @@ contract FeeFlowControllerTest is Test {
 
     function testConstructorMinInitPriceExceedsABSMaxInitPrice() public {
         // Fails at init price check
-        vm.expectRevert(FeeFlowController.InitPriceExceedsMax.selector);
-        new FeeFlowController(
+        vm.expectRevert(FeeFlowControllerNative.InitPriceExceedsMax.selector);
+        new FeeFlowControllerNative(
             uint256(type(uint216).max) + 2,
             address(paymentToken),
             paymentReceiver,
@@ -155,8 +155,8 @@ contract FeeFlowControllerTest is Test {
         address expectedAddress = PredictAddress.calc(deployer, 0);
 
         vm.startPrank(deployer);
-        vm.expectRevert(FeeFlowController.PaymentReceiverIsThis.selector);
-        new FeeFlowController(
+        vm.expectRevert(FeeFlowControllerNative.PaymentReceiverIsThis.selector);
+        new FeeFlowControllerNative(
             INIT_PRICE,
             address(paymentToken),
             expectedAddress,
@@ -183,7 +183,7 @@ contract FeeFlowControllerTest is Test {
 
         uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
         uint256 buyerBalanceAfter = paymentToken.balanceOf(buyer);
-        FeeFlowController.Slot0 memory slot0 = feeFlowController.getSlot0();
+        FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
 
         // Assert token balances
         assert0Balances(address(feeFlowController));
@@ -216,7 +216,7 @@ contract FeeFlowControllerTest is Test {
 
         uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
         uint256 buyerBalanceAfter = paymentToken.balanceOf(buyer);
-        FeeFlowController.Slot0 memory slot0 = feeFlowController.getSlot0();
+        FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
 
         // Assert token balances
         assert0Balances(address(feeFlowController));
@@ -250,7 +250,7 @@ contract FeeFlowControllerTest is Test {
 
         uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
         uint256 buyerBalanceAfter = paymentToken.balanceOf(buyer);
-        FeeFlowController.Slot0 memory slot0 = feeFlowController.getSlot0();
+        FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
 
         // Assert token balances
         assert0Balances(address(feeFlowController));
@@ -270,7 +270,7 @@ contract FeeFlowControllerTest is Test {
         skip(365 days);
 
         vm.startPrank(buyer);
-        vm.expectRevert(FeeFlowController.DeadlinePassed.selector);
+        vm.expectRevert(FeeFlowControllerNative.DeadlinePassed.selector);
         feeFlowController.buy(
             assetsAddresses(), assetsReceiver, 0, block.timestamp - 1 days, 1000000e18
         );
@@ -284,7 +284,7 @@ contract FeeFlowControllerTest is Test {
         mintTokensToBatchBuyer();
 
         vm.startPrank(buyer);
-        vm.expectRevert(FeeFlowController.EmptyAssets.selector);
+        vm.expectRevert(FeeFlowControllerNative.EmptyAssets.selector);
         feeFlowController.buy(
             new address[](0), assetsReceiver, 0, block.timestamp + 1 days, 1000000e18
         );
@@ -301,7 +301,7 @@ contract FeeFlowControllerTest is Test {
         uint256 epochId = 1;
 
         vm.startPrank(buyer);
-        vm.expectRevert(FeeFlowController.EpochIdMismatch.selector);
+        vm.expectRevert(FeeFlowControllerNative.EpochIdMismatch.selector);
         feeFlowController.buy(
             assetsAddresses(), assetsReceiver, epochId, block.timestamp + 1 days, 1000000e18
         );
@@ -315,7 +315,7 @@ contract FeeFlowControllerTest is Test {
         mintTokensToBatchBuyer();
 
         vm.startPrank(buyer);
-        vm.expectRevert(FeeFlowController.MaxPaymentTokenAmountExceeded.selector);
+        vm.expectRevert(FeeFlowControllerNative.MaxPaymentTokenAmountExceeded.selector);
         feeFlowController.buy(
             assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days, INIT_PRICE / 2
         );
@@ -396,7 +396,7 @@ contract FeeFlowControllerTest is Test {
         uint256 absMaxInitPrice = feeFlowController.ABS_MAX_INIT_PRICE();
 
         // Deploy with auction at max init price
-        FeeFlowController tempFeeFlowController = new FeeFlowController(
+        FeeFlowControllerNative tempFeeFlowController = new FeeFlowControllerNative(
             absMaxInitPrice,
             address(paymentToken),
             paymentReceiver,
@@ -418,7 +418,7 @@ contract FeeFlowControllerTest is Test {
         vm.stopPrank();
 
         // Assert new init price
-        FeeFlowController.Slot0 memory slot0 = tempFeeFlowController.getSlot0();
+        FeeFlowControllerNative.Slot0 memory slot0 = tempFeeFlowController.getSlot0();
         assertEq(slot0.initPrice, uint216(absMaxInitPrice));
     }
 
@@ -447,7 +447,7 @@ contract FeeFlowControllerTest is Test {
         );
         vm.stopPrank();
 
-        FeeFlowController.Slot0 memory slot0 = feeFlowController.getSlot0();
+        FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
         assertEq(slot0.epochId, uint16(0));
     }
 
@@ -456,7 +456,7 @@ contract FeeFlowControllerTest is Test {
         uint256 absMaxInitPrice = feeFlowController.ABS_MAX_INIT_PRICE();
         uint256 maxEpochPeriod = feeFlowController.MAX_EPOCH_PERIOD();
 
-        FeeFlowController tempFeeFlowController = new FeeFlowController(
+        FeeFlowControllerNative tempFeeFlowController = new FeeFlowControllerNative(
             absMaxInitPrice,
             address(paymentToken),
             paymentReceiver,
@@ -481,7 +481,7 @@ contract FeeFlowControllerTest is Test {
         uint256 absMaxInitPrice = feeFlowController.ABS_MAX_INIT_PRICE();
         uint256 maxEpochPeriod = feeFlowController.MAX_EPOCH_PERIOD();
 
-        FeeFlowController tempFeeFlowController = new FeeFlowController(
+        FeeFlowControllerNative tempFeeFlowController = new FeeFlowControllerNative(
             absMaxInitPrice,
             address(paymentToken),
             paymentReceiver,
@@ -506,7 +506,7 @@ contract FeeFlowControllerTest is Test {
         uint256 absMaxInitPrice = feeFlowController.ABS_MAX_INIT_PRICE();
         uint256 maxPriceMultiplier = feeFlowController.MAX_PRICE_MULTIPLIER();
 
-        FeeFlowController tempFeeFlowController = new FeeFlowController(
+        FeeFlowControllerNative tempFeeFlowController = new FeeFlowControllerNative(
             absMaxInitPrice,
             address(paymentToken),
             paymentReceiver,
@@ -567,7 +567,7 @@ contract FeeFlowControllerTest is Test {
 
     function assertMintBalances(
         address who
-    ) public {
+    ) public view {
         uint256[] memory mintAmounts_ = mintAmounts();
         uint256[] memory balances = assetsBalances(who);
 
@@ -578,7 +578,7 @@ contract FeeFlowControllerTest is Test {
 
     function assert0Balances(
         address who
-    ) public {
+    ) public view {
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256 balance = tokens[i].balanceOf(who);
             assertEq(balance, 0);
