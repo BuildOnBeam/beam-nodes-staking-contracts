@@ -351,7 +351,7 @@ contract Native721TokenStakingManager is
             revert NativeBalanceLow();
         }
 
-        // TODO: send conversion fee to sender
+        // send conversion fee to sender
         uint256 fee = amount / 10000; // 0.01% fee
         if (fee != 0) {
             amount -= fee;
