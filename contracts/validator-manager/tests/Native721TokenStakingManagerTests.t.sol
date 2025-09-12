@@ -909,9 +909,11 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         app.registerProtocolRewards();
     }
 
-    function testRegisterProtocolRewardsWrapsAndRegisters() public {
-        // Fund contract with 10 ether
-        uint256 initialBalance = 10 ether;
+    function testFuzzRegisterProtocolRewardsWrapsAndRegisters(
+        uint256 initialBalance
+    ) public {
+        // Fund contract with n ether
+        initialBalance = bound(initialBalance, 1 ether, 10_000_000 ether);
         vm.deal(address(app), initialBalance);
 
         // Track caller balance before
