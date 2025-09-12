@@ -1,0 +1,307 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity 0.8.25;
+
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
+import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
+
+contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+    error ZeroAddress();
+    error InvalidInput();
+
+    struct TokenPrice {
+        uint256 usdcPrice;
+        uint256 usdcValue;
+        uint256 tokenAmount;
+        string name;
+        string symbol;
+        address token;
+        uint8 decimals;
+    }
+
+    address public USDC;
+    address public WETH;
+    IUniswapV2Router02 public UNISWAP_V2_ROUTER;
+    address internal UNISWAP_V2_FACTORY;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function __UniswapV2Oracle_init(
+        address router,
+        address usdc
+    ) internal virtual onlyInitializing {
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
+
+        __UniswapV2Oracle_init_unchained(router, usdc);
+    }
+
+    function __UniswapV2Oracle_init_unchained(
+        address router,
+        address usdc
+    ) internal virtual onlyInitializing {
+        if (router == address(0) || usdc == address(0)) {
+            revert ZeroAddress();
+        }
+
+        UNISWAP_V2_ROUTER = IUniswapV2Router02(router);
+        UNISWAP_V2_FACTORY = UNISWAP_V2_ROUTER.factory();
+        WETH = UNISWAP_V2_ROUTER.WETH();
+        USDC = usdc;
+    }
+
+    // Main public getters
+
+    function getTokenPrice(
+        address token
+    ) public view virtual returns (TokenPrice memory result) {
+        (result.name, result.symbol, result.decimals) = getTokenMetadata(token);
+        result.usdcPrice = usdcToToken(token, 1e6);
+        result.token = token;
+
+        return result;
+    }
+
+    function getTokenPrice(
+        address[] memory tokens
+    ) public view virtual returns (TokenPrice[] memory result) {
+        result = new TokenPrice[](tokens.length);
+        uint256 len = tokens.length;
+
+        for (uint256 i; i < len; ++i) {
+            result[i] = getTokenPrice(tokens[i]);
+        }
+
+        return result;
+    }
+
+    function getTokenPrice(
+        address token,
+        uint256 tokenAmount
+    ) public view virtual returns (TokenPrice memory result) {
+        result = getTokenPrice(token);
+        if (tokenAmount == 0) {
+            return result;
+        }
+
+        result.tokenAmount = tokenAmount;
+        result.usdcValue = tokenToUSDC(token, tokenAmount);
+
+        return result;
+    }
+
+    function getTokenPrice(
+        address[] memory tokens,
+        uint256[] memory tokenAmounts
+    ) public view virtual returns (TokenPrice[] memory result) {
+        if (tokens.length != tokenAmounts.length) {
+            revert InvalidInput();
+        }
+
+        result = new TokenPrice[](tokens.length);
+        uint256 len = tokens.length;
+
+        for (uint256 i; i < len; ++i) {
+            result[i] = getTokenPrice(tokens[i], tokenAmounts[i]);
+        }
+
+        return result;
+    }
+
+    function getTokenPrice(
+        address token,
+        address owner
+    ) public view virtual returns (TokenPrice memory result) {
+        uint256 balance = IERC20(token).balanceOf(owner);
+        return getTokenPrice(token, balance);
+    }
+
+    function getTokenPrice(
+        address[] memory tokens,
+        address owner
+    ) public view virtual returns (TokenPrice[] memory result) {
+        result = new TokenPrice[](tokens.length);
+        uint256 len = tokens.length;
+
+        for (uint256 i; i < len; ++i) {
+            result[i] = getTokenPrice(tokens[i], owner);
+        }
+
+        return result;
+    }
+
+    // Public helpers
+
+    function getTokenMetadata(
+        address token
+    ) public view virtual returns (string memory name, string memory symbol, uint8 decimals) {
+        try IERC20Metadata(token).name() returns (string memory _name) {
+            name = _name;
+        } catch {
+            name = "N/A";
+        }
+        try IERC20Metadata(token).symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {
+            symbol = "N/A";
+        }
+        try IERC20Metadata(token).decimals() returns (uint8 _decimals) {
+            decimals = _decimals;
+        } catch {
+            decimals = 0;
+        }
+    }
+
+    function tokenToUSDC(
+        address fromToken,
+        uint256 tokenAmount
+    ) public view virtual returns (uint256) {
+        if (tokenAmount == 0) return 0;
+        if (fromToken == USDC) return tokenAmount;
+        return _toTokenAmount(fromToken, USDC, tokenAmount);
+    }
+
+    function usdcToToken(
+        address toToken,
+        uint256 usdcAmount
+    ) public view virtual returns (uint256) {
+        if (usdcAmount == 0) return 0;
+        if (toToken == USDC) return usdcAmount;
+        return _toTokenAmount(USDC, toToken, usdcAmount);
+    }
+
+    function tokenToToken(
+        address fromToken,
+        address toToken,
+        uint256 fromAmount
+    ) public view virtual returns (uint256) {
+        if (fromAmount == 0) return 0;
+        if (fromToken == toToken) return fromAmount;
+
+        return _toTokenAmount(fromToken, toToken, fromAmount);
+    }
+
+    // Internal getters
+
+    function _toTokenAmount(
+        address fromToken,
+        address toToken,
+        uint256 fromAmount
+    ) internal view virtual returns (uint256 toAmount) {
+        toAmount = _getToTokenAmount(fromToken, toToken, fromAmount);
+
+        if (toAmount == 0) {
+            // experimental LP-token support
+            if (_isLPToken(fromToken)) {
+                (address token0, uint256 amount0, address token1, uint256 amount1) =
+                    _resolveLPToken(fromToken, fromAmount);
+                uint256 value0 = _getToTokenAmount(token0, toToken, amount0);
+                uint256 value1 = _getToTokenAmount(token1, toToken, amount1);
+                return value0 + value1;
+            } else if (_isLPToken(toToken)) {
+                // normalize to 1 LP token
+                (address token0, uint256 lpAmount0, address token1, uint256 lpAmount1) =
+                    _resolveLPToken(toToken, 1e18);
+
+                // figure out how much "fromToken" is needed to mint 1 LP
+                uint256 fromFor0 = _getFromTokenAmount(fromToken, token0, lpAmount0);
+                uint256 fromFor1 = _getFromTokenAmount(fromToken, token1, lpAmount1);
+                uint256 totalFromFor1LP = fromFor0 + fromFor1;
+
+                if (totalFromFor1LP > 0) {
+                    return (fromAmount * 1e18) / totalFromFor1LP;
+                }
+            }
+        }
+
+        return toAmount;
+    }
+
+    function _getToTokenAmount(
+        address fromToken,
+        address toToken,
+        uint256 fromAmount
+    ) internal view virtual returns (uint256) {
+        address[] memory path = _getUniswapV2Path(fromToken, toToken);
+        try UNISWAP_V2_ROUTER.getAmountsOut(fromAmount, path) returns (uint[] memory amounts) {
+            return amounts[path.length - 1];
+        } catch {
+            return 0;
+        }
+    }
+
+    function _getFromTokenAmount(
+        address fromToken,
+        address toToken,
+        uint256 toAmount
+    ) internal view virtual returns (uint256) {
+        address[] memory path = _getUniswapV2Path(fromToken, toToken);
+        try UNISWAP_V2_ROUTER.getAmountsIn(toAmount, path) returns (uint[] memory amounts) {
+            return amounts[0];
+        } catch {
+            return 0;
+        }
+    }
+
+    function _isLPToken(
+        address lpToken
+    ) internal view virtual returns (bool) {
+        try IUniswapV2Pair(lpToken).factory() returns (address factory) {
+            if (factory == UNISWAP_V2_FACTORY) return true;
+        } catch {}
+
+        return false;
+    }
+
+    function _resolveLPToken(
+        address lpToken,
+        uint256 lpTokenAmount
+    )
+        internal
+        view
+        virtual
+        returns (address token0, uint256 amount0, address token1, uint256 amount1)
+    {
+        IUniswapV2Pair pair = IUniswapV2Pair(lpToken);
+
+        token0 = pair.token0();
+        token1 = pair.token1();
+
+        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
+        uint256 totalSupply = pair.totalSupply();
+
+        amount0 = (uint256(reserve0) * lpTokenAmount) / totalSupply;
+        amount1 = (uint256(reserve1) * lpTokenAmount) / totalSupply;
+    }
+
+    function _getUniswapV2Path(
+        address fromToken,
+        address toToken
+    ) internal view virtual returns (address[] memory) {
+        if (fromToken == WETH || toToken == WETH) {
+            address[] memory directPath = new address[](2);
+            directPath[0] = fromToken;
+            directPath[1] = toToken;
+            return directPath;
+        }
+
+        address[] memory path = new address[](3);
+        path[0] = fromToken;
+        path[1] = WETH;
+        path[2] = toToken;
+        return path;
+    }
+
+    // Internal: upgrades
+
+    function _authorizeUpgrade(
+        address /*newImplementation*/
+    ) internal override onlyOwner {}
+}
