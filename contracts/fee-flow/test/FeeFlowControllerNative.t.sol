@@ -727,7 +727,7 @@ contract FeeFlowControllerTest is Test {
     }
 
     function testFuzzBuyNativeEpochId(
-        uint256 fuzzEpochId
+        uint16 fuzzEpochId
     ) public {
         mintTokensToBatchBuyer();
 
@@ -740,6 +740,25 @@ contract FeeFlowControllerTest is Test {
         }
         feeFlowController.buyNative{value: expectedPrice}(
             assetsAddresses(), assetsReceiver, fuzzEpochId, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+    }
+
+    function testFuzzBuyEpochId(
+        uint16 fuzzEpochId
+    ) public {
+        mintTokensToBatchBuyer();
+
+        uint256 expectedPrice = feeFlowController.getPrice();
+        _mintWeth(buyer, expectedPrice);
+
+        vm.startPrank(buyer);
+        paymentToken.approve(address(feeFlowController), type(uint256).max);
+        if (fuzzEpochId != 0) {
+            vm.expectRevert(FeeFlowControllerNative.EpochIdMismatch.selector);
+        }
+        feeFlowController.buy(
+            assetsAddresses(), assetsReceiver, fuzzEpochId, block.timestamp + 1 days, expectedPrice
         );
         vm.stopPrank();
     }
