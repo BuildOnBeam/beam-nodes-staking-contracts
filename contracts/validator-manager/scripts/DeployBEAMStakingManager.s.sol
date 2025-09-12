@@ -45,6 +45,7 @@ contract DeployBEAMStakingManager is Script {
     // uint256 constant MINIMUM_DELEGATION_AMOUNT = 100e18;
     // uint256 constant WEIGHT_TO_VALUE_FACTOR = 1e18;
     // bytes32 constant UPTIME_BLOCKCHAIN_ID = bytes32(hex"f94107902c8418dfcdf51d3f95429688abc7109e0f5b0e806c7e204d542e0761"); //mainnet
+    // address constant WETH_ADDRESS = address(0xF65B6f9c94187276C7d91F4F74134751d248bFeA);
 
     address constant NFT_TOKEN_ADDRESS = address(0x732080D7aD6A9C50039d7Ad7F5BD0a79670f7654);
     address constant ADMIN_ADDRESS = address(0xd68F802fD0B6f56524F379805DD8FcC152DB9d5c);
@@ -60,6 +61,7 @@ contract DeployBEAMStakingManager is Script {
     uint256 constant WEIGHT_TO_VALUE_FACTOR = 1e18;
     bytes32 constant UPTIME_BLOCKCHAIN_ID =
         bytes32(hex"7f78fe8ca06cefa186ef29c15231e45e1056cd8319ceca0695ca61099e610355");
+    address constant WETH_ADDRESS = address(0xD51BFa777609213A653a2CD067c9A0132a2D316A);
 
     function run() external {
         // Start broadcasting transactions
@@ -89,7 +91,10 @@ contract DeployBEAMStakingManager is Script {
         });
 
         bytes memory initData = abi.encodeWithSelector(
-            Native721TokenStakingManager.initialize.selector, settings, IERC721(NFT_TOKEN_ADDRESS)
+            Native721TokenStakingManager.initialize.selector,
+            settings,
+            IERC721(NFT_TOKEN_ADDRESS),
+            address(WETH_ADDRESS)
         );
 
         // Deploy proxy with initialization

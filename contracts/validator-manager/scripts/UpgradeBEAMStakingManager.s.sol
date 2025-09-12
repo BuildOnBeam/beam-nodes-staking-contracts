@@ -48,6 +48,7 @@ contract UpgradeBEAMStakingManager is Script {
     // bytes32 constant UPTIME_BLOCKCHAIN_ID = bytes32(hex"7f78fe8ca06cefa186ef29c15231e45e1056cd8319ceca0695ca61099e610355");
     // uint64 constant EPOCH_OFFSET = 0;
     // address constant UPTIME_KEEPER = address(0xd68F802fD0B6f56524F379805DD8FcC152DB9d5c);
+    // address constant WETH_ADDRESS = address(0xF65B6f9c94187276C7d91F4F74134751d248bFeA);
 
     // mainnet
     address constant _PROXY_ADDRESS = address(0x2FD428A5484d113294b44E69Cb9f269abC1d5B54);
@@ -69,6 +70,7 @@ contract UpgradeBEAMStakingManager is Script {
         bytes32(hex"f94107902c8418dfcdf51d3f95429688abc7109e0f5b0e806c7e204d542e0761");
     uint64 constant EPOCH_OFFSET = 55998;
     address constant UPTIME_KEEPER = address(0xfEFFD4f8b89111CD085B80Ce994aB34C7e001a69);
+    address constant WETH_ADDRESS = address(0xD51BFa777609213A653a2CD067c9A0132a2D316A);
 
     function run() external {
         vm.startBroadcast();
@@ -101,7 +103,10 @@ contract UpgradeBEAMStakingManager is Script {
 
         // use if settings change and contract needs to be re-initialized
         bytes memory initSelector = abi.encodeWithSelector(
-            Native721TokenStakingManager.initialize.selector, settings, address(NFT_TOKEN_ADDRESS)
+            Native721TokenStakingManager.initialize.selector,
+            settings,
+            address(NFT_TOKEN_ADDRESS),
+            address(WETH_ADDRESS)
         );
 
         // Get ProxyAdmin instance

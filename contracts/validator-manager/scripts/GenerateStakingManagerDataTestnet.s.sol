@@ -42,6 +42,7 @@ contract GenerateStakingManagerDataTestnet is Script {
         bytes32(hex"7f78fe8ca06cefa186ef29c15231e45e1056cd8319ceca0695ca61099e610355");
     uint64 constant EPOCH_OFFSET = 0;
     address constant UPTIME_KEEPER = address(0xd68F802fD0B6f56524F379805DD8FcC152DB9d5c);
+    address constant WETH_ADDRESS = address(0xF65B6f9c94187276C7d91F4F74134751d248bFeA);
 
     function run() external {
         // Add settings struct for initialization
@@ -64,7 +65,10 @@ contract GenerateStakingManagerDataTestnet is Script {
 
         // use if settings change and contract needs to be re-initialized
         bytes memory initSelector = abi.encodeWithSelector(
-            Native721TokenStakingManager.initialize.selector, settings, address(NFT_TOKEN_ADDRESS)
+            Native721TokenStakingManager.initialize.selector,
+            settings,
+            address(NFT_TOKEN_ADDRESS),
+            address(WETH_ADDRESS)
         );
 
         string memory initData = vm.toString(initSelector);
