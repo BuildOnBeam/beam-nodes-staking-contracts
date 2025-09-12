@@ -7,6 +7,7 @@ import "./lib/ReenteringMockToken.sol";
 import "./lib/PredictAddress.sol";
 import "./lib/OverflowableEpochIdFeeFlowController.sol";
 import "../FeeFlowControllerNative.sol";
+import {WETH} from "@solmate/tokens/WETH.sol";
 
 contract FeeFlowControllerTest is Test {
     uint256 public constant INIT_PRICE = 1e18;
@@ -18,7 +19,7 @@ contract FeeFlowControllerTest is Test {
     address public buyer = makeAddr("buyer");
     address public assetsReceiver = makeAddr("assetsReceiver");
 
-    MockToken paymentToken;
+    WETH paymentToken;
     MockToken token1;
     MockToken token2;
     MockToken token3;
@@ -29,7 +30,7 @@ contract FeeFlowControllerTest is Test {
 
     function setUp() public {
         // Deploy tokens
-        paymentToken = new MockToken("Payment Token", "PAY");
+        paymentToken = new WETH();
         vm.label(address(paymentToken), "paymentToken");
         token1 = new MockToken("Token 1", "T1");
         vm.label(address(token1), "token1");
@@ -55,11 +56,17 @@ contract FeeFlowControllerTest is Test {
         );
 
         // Mint payment tokens to buyer
-        paymentToken.mint(buyer, 1000000e18);
+        _mintWeth(buyer, 1000000e18);
         // Approve payment token from buyer to FeeFlowController
         vm.startPrank(buyer);
         paymentToken.approve(address(feeFlowController), type(uint256).max);
         vm.stopPrank();
+    }
+
+    function _mintWeth(address receiver, uint256 amount) internal {
+        vm.deal(receiver, amount);
+        vm.prank(receiver);
+        paymentToken.deposit{value: amount}();
     }
 
     function testConstructor() public view {
@@ -170,7 +177,7 @@ contract FeeFlowControllerTest is Test {
     function testBuyStartOfAuction() public {
         mintTokensToBatchBuyer();
 
-        uint256 paymentReceiverBalanceBefore = paymentToken.balanceOf(paymentReceiver);
+        uint256 paymentReceiverBalanceBefore = paymentReceiver.balance;
         uint256 buyerBalanceBefore = paymentToken.balanceOf(buyer);
 
         uint256 expectedPrice = feeFlowController.getPrice();
@@ -181,7 +188,7 @@ contract FeeFlowControllerTest is Test {
         );
         vm.stopPrank();
 
-        uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
+        uint256 paymentReceiverBalanceAfter = paymentReceiver.balance;
         uint256 buyerBalanceAfter = paymentToken.balanceOf(buyer);
         FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
 
@@ -201,7 +208,7 @@ contract FeeFlowControllerTest is Test {
     function testBuyEndOfAuction() public {
         mintTokensToBatchBuyer();
 
-        uint256 paymentReceiverBalanceBefore = paymentToken.balanceOf(paymentReceiver);
+        uint256 paymentReceiverBalanceBefore = paymentReceiver.balance;
         uint256 buyerBalanceBefore = paymentToken.balanceOf(buyer);
 
         // Skip to end of auction and then some
@@ -214,7 +221,7 @@ contract FeeFlowControllerTest is Test {
         );
         vm.stopPrank();
 
-        uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
+        uint256 paymentReceiverBalanceAfter = paymentReceiver.balance;
         uint256 buyerBalanceAfter = paymentToken.balanceOf(buyer);
         FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
 
@@ -235,7 +242,7 @@ contract FeeFlowControllerTest is Test {
     function testBuyMiddleOfAuction() public {
         mintTokensToBatchBuyer();
 
-        uint256 paymentReceiverBalanceBefore = paymentToken.balanceOf(paymentReceiver);
+        uint256 paymentReceiverBalanceBefore = paymentReceiver.balance;
         uint256 buyerBalanceBefore = paymentToken.balanceOf(buyer);
 
         // Skip to middle of auction
@@ -248,7 +255,7 @@ contract FeeFlowControllerTest is Test {
         );
         vm.stopPrank();
 
-        uint256 paymentReceiverBalanceAfter = paymentToken.balanceOf(paymentReceiver);
+        uint256 paymentReceiverBalanceAfter = paymentReceiver.balance;
         uint256 buyerBalanceAfter = paymentToken.balanceOf(buyer);
         FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
 
@@ -406,7 +413,7 @@ contract FeeFlowControllerTest is Test {
         );
 
         // Mint payment tokens to buyer
-        paymentToken.mint(buyer, type(uint216).max);
+        _mintWeth(buyer, type(uint216).max);
 
         vm.startPrank(buyer);
         // Approve payment token from buyer to FeeFlowController
@@ -424,7 +431,7 @@ contract FeeFlowControllerTest is Test {
 
     function testBuyWrapAroundEpochId() public {
         // MINT a lot of tokens
-        paymentToken.mint(buyer, type(uint256).max - paymentToken.balanceOf(buyer));
+        _mintWeth(buyer, type(uint256).max - paymentToken.balanceOf(buyer));
 
         OverflowableEpochIdFeeFlowController tempFeeFlowController = new OverflowableEpochIdFeeFlowController(
             MIN_INIT_PRICE,
@@ -464,7 +471,7 @@ contract FeeFlowControllerTest is Test {
             1.1e18,
             absMaxInitPrice
         );
-        paymentToken.mint(buyer, absMaxInitPrice);
+        _mintWeth(buyer, absMaxInitPrice);
 
         skip(maxEpochPeriod);
 
@@ -489,7 +496,7 @@ contract FeeFlowControllerTest is Test {
             1.1e18,
             absMaxInitPrice
         );
-        paymentToken.mint(buyer, absMaxInitPrice);
+        _mintWeth(buyer, absMaxInitPrice);
 
         skip(maxEpochPeriod - 1);
 
@@ -514,7 +521,7 @@ contract FeeFlowControllerTest is Test {
             maxPriceMultiplier,
             absMaxInitPrice
         );
-        paymentToken.mint(buyer, absMaxInitPrice);
+        _mintWeth(buyer, absMaxInitPrice);
 
         vm.startPrank(buyer);
         paymentToken.approve(address(tempFeeFlowController), type(uint256).max);
