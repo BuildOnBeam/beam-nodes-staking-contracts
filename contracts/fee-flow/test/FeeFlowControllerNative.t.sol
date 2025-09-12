@@ -537,6 +537,213 @@ contract FeeFlowControllerTest is Test {
         vm.stopPrank();
     }
 
+    // Native token specific tests ------------------------------------------------
+    function testBuyNativeStartOfAuction() public {
+        mintTokensToBatchBuyer();
+
+        uint256 paymentReceiverBalanceBefore = paymentReceiver.balance;
+        uint256 buyerBalanceBefore = 1 ether;
+        uint256 expectedPrice = feeFlowController.getPrice();
+
+        vm.deal(buyer, expectedPrice + 1 ether); // Give buyer enough ETH
+        vm.startPrank(buyer);
+        uint256 paymentAmount = feeFlowController.buyNative{value: expectedPrice + 1 ether}(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        uint256 paymentReceiverBalanceAfter = paymentReceiver.balance;
+        uint256 buyerBalanceAfter = buyer.balance;
+        FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
+
+        assert0Balances(address(feeFlowController));
+        assertMintBalances(assetsReceiver);
+        assertEq(paymentAmount, expectedPrice);
+        assertEq(paymentReceiverBalanceAfter, paymentReceiverBalanceBefore + expectedPrice);
+        // Buyer should get excess refunded
+        assertEq(buyerBalanceAfter, buyerBalanceBefore);
+        assertEq(slot0.epochId, uint8(1));
+        assertEq(slot0.initPrice, uint128(INIT_PRICE * 2));
+        assertEq(slot0.startTime, block.timestamp);
+    }
+
+    function testBuyNativeEndOfAuction() public {
+        mintTokensToBatchBuyer();
+
+        uint256 paymentReceiverBalanceBefore = paymentReceiver.balance;
+        uint256 buyerBalanceBefore = buyer.balance;
+
+        skip(EPOCH_PERIOD + 1 days);
+        uint256 expectedPrice = feeFlowController.getPrice();
+
+        vm.deal(buyer, 1 ether);
+        vm.startPrank(buyer);
+        uint256 paymentAmount = feeFlowController.buyNative{value: 1 ether}(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        uint256 paymentReceiverBalanceAfter = paymentReceiver.balance;
+        uint256 buyerBalanceAfter = buyer.balance;
+        FeeFlowControllerNative.Slot0 memory slot0 = feeFlowController.getSlot0();
+
+        assert0Balances(address(feeFlowController));
+        assertMintBalances(assetsReceiver);
+        assertEq(expectedPrice, 0);
+        assertEq(paymentAmount, 0);
+        assertEq(paymentReceiverBalanceAfter, paymentReceiverBalanceBefore);
+        assertEq(buyerBalanceAfter - 1 ether, buyerBalanceBefore);
+        assertEq(slot0.epochId, uint8(1));
+        assertEq(slot0.initPrice, MIN_INIT_PRICE);
+        assertEq(slot0.startTime, block.timestamp);
+    }
+
+    function testBuyNativeDeadlinePassedShouldFail() public {
+        mintTokensToBatchBuyer();
+        skip(365 days);
+
+        vm.deal(buyer, 1 ether);
+        vm.startPrank(buyer);
+        vm.expectRevert(FeeFlowControllerNative.DeadlinePassed.selector);
+        feeFlowController.buyNative{value: 1 ether}(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp - 1 days
+        );
+        vm.stopPrank();
+
+        assertMintBalances(address(feeFlowController));
+    }
+
+    function testBuyNativeEmptyAssetsShouldFail() public {
+        mintTokensToBatchBuyer();
+
+        vm.deal(buyer, 1 ether);
+        vm.startPrank(buyer);
+        vm.expectRevert(FeeFlowControllerNative.EmptyAssets.selector);
+        feeFlowController.buyNative{value: 1 ether}(
+            new address[](0), assetsReceiver, 0, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        assertMintBalances(address(feeFlowController));
+    }
+
+    function testBuyNativeWrongEpochShouldFail() public {
+        mintTokensToBatchBuyer();
+
+        vm.deal(buyer, 1 ether);
+        vm.startPrank(buyer);
+        vm.expectRevert(FeeFlowControllerNative.EpochIdMismatch.selector);
+        feeFlowController.buyNative{value: 1 ether}(
+            assetsAddresses(), assetsReceiver, 1, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        assertMintBalances(address(feeFlowController));
+    }
+
+    function testBuyNativeRefundsExcessETH() public {
+        mintTokensToBatchBuyer();
+
+        uint256 expectedPrice = feeFlowController.getPrice();
+        uint256 excess = 1 ether;
+        uint256 totalSent = expectedPrice + excess;
+
+        vm.deal(buyer, totalSent);
+        uint256 buyerBalanceBefore = buyer.balance;
+
+        vm.startPrank(buyer);
+        feeFlowController.buyNative{value: totalSent}(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        uint256 buyerBalanceAfter = buyer.balance;
+        // Buyer should only pay expectedPrice, excess refunded
+        assertEq(buyerBalanceAfter, buyerBalanceBefore - expectedPrice);
+    }
+
+    function testBuyNativeZeroPayment() public {
+        mintTokensToBatchBuyer();
+
+        skip(EPOCH_PERIOD + 1 days);
+
+        vm.deal(buyer, 1 ether);
+        uint256 buyerBalanceBefore = buyer.balance;
+
+        vm.startPrank(buyer);
+        uint256 paymentAmount = feeFlowController.buyNative{value: 1 ether}(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        uint256 buyerBalanceAfter = buyer.balance;
+        // Should pay nothing, all ETH refunded
+        assertEq(paymentAmount, 0);
+        assertEq(buyerBalanceAfter, buyerBalanceBefore);
+    }
+
+    function testFuzzBuyNativePayment(
+        uint256 extraEth
+    ) public {
+        mintTokensToBatchBuyer();
+
+        uint256 expectedPrice = feeFlowController.getPrice();
+        uint256 sentEth = expectedPrice + (extraEth % 1 ether);
+
+        vm.deal(buyer, sentEth);
+        uint256 buyerBalanceBefore = buyer.balance;
+
+        vm.startPrank(buyer);
+        uint256 paymentAmount = feeFlowController.buyNative{value: sentEth}(
+            assetsAddresses(), assetsReceiver, 0, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+
+        uint256 buyerBalanceAfter = buyer.balance;
+        assertEq(paymentAmount, expectedPrice);
+        assertEq(buyerBalanceAfter, buyerBalanceBefore - expectedPrice);
+        assert0Balances(address(feeFlowController));
+        assertMintBalances(assetsReceiver);
+    }
+
+    function testFuzzBuyNativeDeadline(
+        uint256 fuzzDeadline
+    ) public {
+        mintTokensToBatchBuyer();
+
+        uint256 expectedPrice = feeFlowController.getPrice();
+        vm.deal(buyer, expectedPrice);
+
+        uint256 deadline = block.timestamp + (fuzzDeadline % 30 days);
+
+        vm.startPrank(buyer);
+        if (block.timestamp > deadline) {
+            vm.expectRevert(FeeFlowControllerNative.DeadlinePassed.selector);
+        }
+        feeFlowController.buyNative{value: expectedPrice}(
+            assetsAddresses(), assetsReceiver, 0, deadline
+        );
+        vm.stopPrank();
+    }
+
+    function testFuzzBuyNativeEpochId(
+        uint256 fuzzEpochId
+    ) public {
+        mintTokensToBatchBuyer();
+
+        uint256 expectedPrice = feeFlowController.getPrice();
+        vm.deal(buyer, expectedPrice);
+
+        vm.startPrank(buyer);
+        if (fuzzEpochId != 0) {
+            vm.expectRevert(FeeFlowControllerNative.EpochIdMismatch.selector);
+        }
+        feeFlowController.buyNative{value: expectedPrice}(
+            assetsAddresses(), assetsReceiver, fuzzEpochId, block.timestamp + 1 days
+        );
+        vm.stopPrank();
+    }
+
     // Helper functions -----------------------------------------------------
     function mintTokensToBatchBuyer() public {
         for (uint256 i = 0; i < tokens.length; i++) {
