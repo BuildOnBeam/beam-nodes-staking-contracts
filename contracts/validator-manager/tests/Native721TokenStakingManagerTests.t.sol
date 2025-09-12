@@ -897,6 +897,50 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         assertEq(extraToken.balanceOf(address(this)), half);
     }
 
+    // Protocol rewards
+    function testRegisterProtocolRewardsRevertsIfLowBalance() public {
+        // Ensure contract has less than 1 ether
+        uint256 initialBalance = 0.5 ether;
+        vm.deal(address(app), initialBalance);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(Native721TokenStakingManager.NativeBalanceLow.selector)
+        );
+        app.registerProtocolRewards();
+    }
+
+    function testRegisterProtocolRewardsWrapsAndRegisters() public {
+        // Fund contract with 10 ether
+        uint256 initialBalance = 10 ether;
+        vm.deal(address(app), initialBalance);
+
+        // Track caller balance before
+        uint256 callerBalanceBefore = address(this).balance;
+
+        // Expect fee to be sent to caller
+        uint256 expectedFee = initialBalance / 10000;
+        uint256 expectedDeposit = initialBalance - expectedFee;
+
+        // Expect WETH deposit
+        vm.expectCall(address(weth), abi.encodeWithSelector(IWETH.deposit.selector));
+
+        // Call registerProtocolRewards
+        uint256 returnedAmount = app.registerProtocolRewards();
+
+        // Check returned amount
+        assertEq(returnedAmount, expectedDeposit);
+
+        // Check fee received
+        assertEq(address(this).balance, callerBalanceBefore + expectedFee);
+
+        // Check WETH balance of contract
+        assertEq(IERC20(address(weth)).balanceOf(address(app)), expectedDeposit);
+
+        // Check reward pool for next epoch
+        uint64 nextEpoch = app.getEpoch() + 1;
+        assertEq(app.getRewards(true, nextEpoch, address(weth), address(this)), 0); // no weight yet
+    }
+
     // Helpers
     function _calculateExpectedRewards(
         uint256 validatorStake,
