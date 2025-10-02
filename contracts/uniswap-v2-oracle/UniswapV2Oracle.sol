@@ -145,7 +145,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function getTokenMetadata(
         address token
     ) public view virtual returns (string memory name, string memory symbol, uint8 decimals) {
-        if (token.code.length == 0) {
+        if (!_isContract(token)) {
             return ("N/A", "N/A", 0);
         }
 
@@ -179,7 +179,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function isLPToken(
         address lpToken
     ) public view virtual returns (bool) {
-        if (lpToken.code.length == 0) {
+        if (!_isContract(lpToken)) {
             return false;
         }
 
@@ -315,7 +315,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address toToken,
         uint256 fromAmount
     ) internal view virtual returns (uint256) {
-        if (fromToken.code.length == 0 || toToken.code.length == 0) {
+        if (!_isContract(fromToken) || !_isContract(toToken)) {
             return 0;
         }
 
@@ -332,7 +332,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address toToken,
         uint256 toAmount
     ) internal view virtual returns (uint256) {
-        if (fromToken.code.length == 0 || toToken.code.length == 0) {
+        if (!_isContract(fromToken) || !_isContract(toToken)) {
             return 0;
         }
 
@@ -342,6 +342,15 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         } catch {
             return 0;
         }
+    }
+
+    function _isContract(
+        address token
+    ) internal view virtual returns (bool) {
+        if (token.code.length == 0) {
+            return false;
+        }
+        return true;
     }
 
     // Internal: upgrades

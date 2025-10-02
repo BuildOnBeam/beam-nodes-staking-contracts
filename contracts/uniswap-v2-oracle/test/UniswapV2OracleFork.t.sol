@@ -146,7 +146,7 @@ contract UniswapV2OracleForkTest is Test {
         // trade "tokenFromAmount"
         router.swapExactTokensForTokens(
             fromTokenAmount, // exact input amount
-            predictedToAmount * 90 / 100, // minimum output amount
+            predictedToAmount * 99 / 100, // minimum output amount
             oracle.getUniswapV2Path(fromToken, toToken),
             user1,
             block.timestamp + 100
