@@ -35,9 +35,10 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
 
     function __UniswapV2Oracle_init(
         address router,
-        address usdc
+        address usdc,
+        address initialOwner
     ) internal virtual onlyInitializing {
-        __Ownable_init(msg.sender);
+        __Ownable_init(initialOwner);
         __UUPSUpgradeable_init();
 
         __UniswapV2Oracle_init_unchained(router, usdc);
@@ -57,8 +58,8 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         USDC = usdc;
     }
 
-    function initialize(address router, address usdc) public initializer {
-        __UniswapV2Oracle_init(router, usdc);
+    function initialize(address router, address usdc, address initialOwner) public initializer {
+        __UniswapV2Oracle_init(router, usdc, initialOwner);
     }
 
     // Main public getters

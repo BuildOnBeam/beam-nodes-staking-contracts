@@ -59,7 +59,7 @@ contract UniswapV2OracleForkTest is Test {
         // Deploy the Oracle contract using ERC1967Proxy
         UniswapV2Oracle impl = new UniswapV2Oracle();
         bytes memory initData =
-            abi.encodeWithSelector(UniswapV2Oracle.initialize.selector, UNISWAP_ROUTER, USDC);
+            abi.encodeWithSelector(UniswapV2Oracle.initialize.selector, UNISWAP_ROUTER, USDC, owner);
 
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         oracle = UniswapV2Oracle(address(proxy));
@@ -80,7 +80,7 @@ contract UniswapV2OracleForkTest is Test {
         // -- "owner" auto-mints 1e28 when deploying
 
         // - Get WETH
-        weth.deposit{value: POOL_AMOUNT_WETH_AW + POOL_AMOUNT_WETH_BW + 100 ether}();
+        weth.deposit{value: POOL_AMOUNT_WETH_AW + POOL_AMOUNT_WETH_BW}();
 
         vm.prank(user1);
         weth.deposit{value: 1e5}();
@@ -145,8 +145,8 @@ contract UniswapV2OracleForkTest is Test {
 
         // trade "tokenFromAmount"
         router.swapExactTokensForTokens(
-            fromTokenAmount,
-            predictedToAmount * 90 / 100,
+            fromTokenAmount, // exact input amount
+            predictedToAmount * 90 / 100, // minimum output amount
             oracle.getUniswapV2Path(fromToken, toToken),
             user1,
             block.timestamp + 100
