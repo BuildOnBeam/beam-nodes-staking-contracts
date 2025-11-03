@@ -377,6 +377,21 @@ contract Native721TokenStakingManager is
     }
 
     /**
+     * @notice Allows the contract owner to fix faulty stake weight for a validator.
+     * @param validationID validator's validation ID
+     * @param newWeight the new stake weight to set
+     *
+     * Requirements:
+     * - Only the contract owner can call this function.
+     */
+    function recoverValidatorWeight(
+        bytes32 validationID,
+        uint64 newWeight
+    ) external onlyOwner nonReentrant {
+        _getStakingManagerStorage()._manager.initiateValidatorWeightUpdate(validationID, newWeight);
+    }
+
+    /**
      * @notice See {INative721TokenStakingManager-erc721}.
      */
     function erc721() external view returns (IERC721) {
