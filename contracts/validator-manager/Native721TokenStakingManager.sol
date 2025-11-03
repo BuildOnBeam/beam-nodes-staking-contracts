@@ -606,13 +606,17 @@ contract Native721TokenStakingManager is
 
         Validator memory validator = $._manager.getValidator(validationID);
 
+        // Ensure the delegation is NFTs
+        _checkNFTDelegator(delegationID);
+
+        // Check ownership
+        if (delegator.owner != _msgSender()) {
+            revert UnauthorizedOwner(_msgSender());
+        }
+
         // Ensure the delegator is active
         if (delegator.status != DelegatorStatus.Active) {
             revert InvalidDelegatorStatus(delegator.status);
-        }
-
-        if (delegator.owner != _msgSender()) {
-            revert UnauthorizedOwner(_msgSender());
         }
 
         if (

@@ -113,6 +113,8 @@ abstract contract StakingManager is
     error InvalidValidatorStatus(ValidatorStatus status);
     error InvalidNonce(uint64 nonce);
     error InvalidWarpMessage();
+    error InvalidMethodForNativeDelegation();
+    error InvalidMethodForNFTDelegation();
 
     // solhint-disable ordering
     /**
@@ -218,8 +220,8 @@ abstract contract StakingManager is
      */
     function initiateValidatorRemoval(
         bytes32 validationID,
-        bool, /*includeUptimeProof*/
-        uint32 /*messageIndex*/
+        bool includeUptimeProof,
+        uint32 messageIndex
     ) external {
         _initiatePoSValidatorRemoval(validationID);
     }
@@ -548,6 +550,14 @@ abstract contract StakingManager is
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         Delegator memory delegator = $._delegatorStakes[delegationID];
 
+        // Ensure the delegation is native
+        _checkNativeDelegator(delegationID);
+
+        // Check ownership
+        if (delegator.owner != _msgSender()) {
+            revert UnauthorizedOwner(_msgSender());
+        }
+
         // Ensure the delegator is removed and tokens are not unlocked yet
         if (delegator.status != DelegatorStatus.Removed || $._unlocked[delegationID]) {
             revert InvalidDelegatorStatus(delegator.status);
@@ -603,8 +613,8 @@ abstract contract StakingManager is
      */
     function initiateDelegatorRemoval(
         bytes32 delegationID,
-        bool, /*includeUptimeProof*/
-        uint32 /*messageIndex*/
+        bool includeUptimeProof,
+        uint32 messageIndex
     ) external {
         _initiateDelegatorRemoval(delegationID);
     }
@@ -627,13 +637,17 @@ abstract contract StakingManager is
         bytes32 validationID = delegator.validationID;
         Validator memory validator = $._manager.getValidator(validationID);
 
+        // Ensure the delegation is native
+        _checkNativeDelegator(delegationID);
+
+        // Check ownership
+        if (delegator.owner != _msgSender()) {
+            revert UnauthorizedOwner(_msgSender());
+        }
+
         // Ensure the delegator is active
         if (delegator.status != DelegatorStatus.Active) {
             revert InvalidDelegatorStatus(delegator.status);
-        }
-
-        if (delegator.owner != _msgSender()) {
-            revert UnauthorizedOwner(_msgSender());
         }
 
         if (validator.status == ValidatorStatus.Active) {
@@ -837,13 +851,45 @@ abstract contract StakingManager is
     }
 
     /**
-     * @dev Throws if `_isPoSValidator` returns false
+     * @dev Throws if `_isPoSValidator` returns `false`.
      */
     function _checkPoSValidator(
         bytes32 validationID
     ) internal view {
         if (!_isPoSValidator(validationID)) {
             revert ValidatorNotPoS(validationID);
+        }
+    }
+
+    /**
+     * @dev Return true if this is a native delegation (i.e. not backed by locked NFTs).
+     */
+    function _isNativeDelegator(
+        bytes32 delegationID
+    ) internal view returns (bool) {
+        StakingManagerStorage storage $ = _getStakingManagerStorage();
+        return $._lockedNFTs[delegationID].length == 0;
+    }
+
+    /**
+     * @dev Throws if `_isNativeDelegator` returns `false`.
+     */
+    function _checkNativeDelegator(
+        bytes32 delegationID
+    ) internal view {
+        if (!_isNativeDelegator(delegationID)) {
+            revert InvalidMethodForNativeDelegation();
+        }
+    }
+
+    /**
+     * @dev Throws if `_isNativeDelegator` returns `true`.
+     */
+    function _checkNFTDelegator(
+        bytes32 delegationID
+    ) internal view {
+        if (_isNativeDelegator(delegationID)) {
+            revert InvalidMethodForNFTDelegation();
         }
     }
 }
