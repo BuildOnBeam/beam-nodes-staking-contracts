@@ -12,16 +12,15 @@ import {console} from "forge-std/console.sol";
  * @dev To run this script:
  * 1. Load private keys from .env
  *    ```bash
- *      source .env
- *      set +a
+ *      source .env;set +a;
  *    ```
  * 2. Run the script with forge (update the RPC URL and PK as needed):
  *    ```bash
  *    # Dry run (simulation)
- *    forge script contracts/validator-manager/scripts/DeployStakingManagerImplementation.s.sol --rpc-url https://build.onbeam.com/rpc/testnet --slow --optimize --optimizer-runs 200 -vvvvv --private-key $PK_TESTNET
+ *    forge script contracts/validator-manager/scripts/DeployStakingManagerImplementation.s.sol --rpc-url https://build.onbeam.com/rpc/testnet --slow --optimize --optimizer-runs 200 -vv --private-key $PK_TESTNET
  *
  *    # Live run
- *    forge script contracts/validator-manager/scripts/DeployStakingManagerImplementation.s.sol --rpc-url https://build.onbeam.com/rpc/testnet --slow --optimize --optimizer-runs 200 -vvvvv --private-key $PK_TESTNET --broadcast --verify --verifier sourcify
+ *    forge script contracts/validator-manager/scripts/DeployStakingManagerImplementation.s.sol --rpc-url https://build.onbeam.com/rpc/testnet --slow --optimize --optimizer-runs 200 -vv --private-key $PK_TESTNET --broadcast --verify --verifier sourcify
  *    ```
  * 3. Manually upgrade the proxy using ProxyAdmin, by calling:
  *    - `upgradeAndCall(stakingManagerProxy, newImplementation, 0x)` if settings didn't change.
