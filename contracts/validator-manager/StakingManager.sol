@@ -19,10 +19,12 @@ import {
     IWarpMessenger,
     WarpMessage
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {ReentrancyGuardUpgradeable} from
-    "@openzeppelin/contracts-upgradeable@5.0.2/utils/ReentrancyGuardUpgradeable.sol";
-import {ContextUpgradeable} from
-    "@openzeppelin/contracts-upgradeable@5.0.2/utils/ContextUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable@5.0.2/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    ContextUpgradeable
+} from "@openzeppelin/contracts-upgradeable@5.0.2/utils/ContextUpgradeable.sol";
 
 /**
  * @dev Implementation of the {IStakingManager} interface.
@@ -113,6 +115,8 @@ abstract contract StakingManager is
     error InvalidValidatorStatus(ValidatorStatus status);
     error InvalidNonce(uint64 nonce);
     error InvalidWarpMessage();
+    error InvalidMethodForNativeDelegation();
+    error InvalidMethodForNFTDelegation();
 
     // solhint-disable ordering
     /**
@@ -205,10 +209,11 @@ abstract contract StakingManager is
     /**
      * @notice See {IStakingManager-submitUptimeProof}.
      */
-    function submitUptimeProof(bytes32 validationID, uint32 messageIndex) external {
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+    function submitUptimeProof(
+        bytes32 validationID,
+        uint32 messageIndex
+    ) external {
+        _checkPoSValidator(validationID);
 
         // Uptime proofs include the absolute number of seconds the validator has been active.
         _updateUptime(validationID, messageIndex);
@@ -364,14 +369,15 @@ abstract contract StakingManager is
         uint256 lockedValue = _lock(stakeAmount);
 
         uint64 weight = valueToWeight(lockedValue);
-        bytes32 validationID = $._manager.initiateValidatorRegistration({
-            nodeID: nodeID,
-            blsPublicKey: blsPublicKey,
-            registrationExpiry: registrationExpiry,
-            remainingBalanceOwner: remainingBalanceOwner,
-            disableOwner: disableOwner,
-            weight: weight
-        });
+        bytes32 validationID = $._manager
+            .initiateValidatorRegistration({
+                nodeID: nodeID,
+                blsPublicKey: blsPublicKey,
+                registrationExpiry: registrationExpiry,
+                remainingBalanceOwner: remainingBalanceOwner,
+                disableOwner: disableOwner,
+                weight: weight
+            });
 
         address owner = _msgSender();
 
@@ -429,7 +435,10 @@ abstract contract StakingManager is
      * @param to Address to send token to.
      * @param value Number of tokens to lock.
      */
-    function _unlock(address to, uint256 value) internal virtual;
+    function _unlock(
+        address to,
+        uint256 value
+    ) internal virtual;
 
     /**
      * @notice Initiates delegator registration by updating the validator's weight and storing the delegation information.
@@ -449,9 +458,7 @@ abstract contract StakingManager is
         // Ensure the validation period is active
         Validator memory validator = $._manager.getValidator(validationID);
         // Check that the validation ID is a PoS validator
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -497,7 +504,10 @@ abstract contract StakingManager is
      * @notice See {IStakingManager-completeDelegatorRegistration}.
      * Extends the functionality of {ACP99Manager-completeValidatorWeightUpdate} by updating the delegation status.
      */
-    function completeDelegatorRegistration(bytes32 delegationID, uint32 messageIndex) external {
+    function completeDelegatorRegistration(
+        bytes32 delegationID,
+        uint32 messageIndex
+    ) external {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
 
         Delegator memory delegator = $._delegatorStakes[delegationID];
@@ -552,6 +562,14 @@ abstract contract StakingManager is
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         Delegator memory delegator = $._delegatorStakes[delegationID];
 
+        // Ensure the delegation is native
+        _checkNativeDelegator(delegationID);
+
+        // Check ownership
+        if (delegator.owner != _msgSender()) {
+            revert UnauthorizedOwner(_msgSender());
+        }
+
         // Ensure the delegator is removed and tokens are not unlocked yet
         if (delegator.status != DelegatorStatus.Removed || $._unlocked[delegationID]) {
             revert InvalidDelegatorStatus(delegator.status);
@@ -563,9 +581,7 @@ abstract contract StakingManager is
         // Ensure the validation period is active
         Validator memory validator = $._manager.getValidator(validationID);
         // Check that the validation ID is a PoS validator
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
         if (validator.status != ValidatorStatus.Active) {
             revert InvalidValidatorStatus(validator.status);
         }
@@ -633,13 +649,17 @@ abstract contract StakingManager is
         bytes32 validationID = delegator.validationID;
         Validator memory validator = $._manager.getValidator(validationID);
 
+        // Ensure the delegation is native
+        _checkNativeDelegator(delegationID);
+
+        // Check ownership
+        if (delegator.owner != _msgSender()) {
+            revert UnauthorizedOwner(_msgSender());
+        }
+
         // Ensure the delegator is active
         if (delegator.status != DelegatorStatus.Active) {
             revert InvalidDelegatorStatus(delegator.status);
-        }
-
-        if (delegator.owner != _msgSender()) {
-            revert UnauthorizedOwner(_msgSender());
         }
 
         if (validator.status == ValidatorStatus.Active) {
@@ -654,9 +674,11 @@ abstract contract StakingManager is
             $._delegatorStakes[delegationID].status = DelegatorStatus.PendingRemoved;
             $._delegatorStakes[delegationID].endTime = uint64(block.timestamp);
 
-            ($._delegatorStakes[delegationID].endingNonce,) = $
-                ._manager
-                .initiateValidatorWeightUpdate(validationID, validator.weight - delegator.weight);
+            ($._delegatorStakes[delegationID].endingNonce,) =
+                $._manager
+                    .initiateValidatorWeightUpdate(
+                        validationID, validator.weight - delegator.weight
+                    );
 
             emit InitiatedDelegatorRemoval({delegationID: delegationID, validationID: validationID});
             return;
@@ -723,7 +745,7 @@ abstract contract StakingManager is
 
         // We only expect an ICM message if we haven't received a weight update with a nonce greater than the delegation's ending nonce
         if (
-            $._manager.getValidator(delegator.validationID).status != ValidatorStatus.Completed
+            validator.status != ValidatorStatus.Completed
                 && validator.receivedNonce < delegator.endingNonce
         ) {
             (bytes32 validationID, uint64 nonce) =
@@ -786,17 +808,13 @@ abstract contract StakingManager is
         Validator memory validator = $._manager.getValidator(validationID);
 
         if (
-            (
-                validator.status != ValidatorStatus.Completed
-                    && validator.status != ValidatorStatus.Invalidated
-            ) || $._unlocked[validationID]
+            (validator.status != ValidatorStatus.Completed
+                    && validator.status != ValidatorStatus.Invalidated) || $._unlocked[validationID]
         ) {
             revert InvalidValidatorStatus(validator.status);
         }
 
-        if (!_isPoSValidator(validationID)) {
-            revert ValidatorNotPoS(validationID);
-        }
+        _checkPoSValidator(validationID);
 
         if (validator.startTime != 0 && block.timestamp < validator.endTime + $._unlockDuration) {
             revert UnlockDurationNotPassed(uint64(block.timestamp));
@@ -831,7 +849,10 @@ abstract contract StakingManager is
     /**
      * @dev This function must be implemented to mint rewards to validators and delegators.
      */
-    function _reward(address account, uint256 amount) internal virtual;
+    function _reward(
+        address account,
+        uint256 amount
+    ) internal virtual;
 
     /**
      * @dev Return true if this is a PoS validator with locked stake. Returns false if this was originally a PoA
@@ -840,7 +861,48 @@ abstract contract StakingManager is
     function _isPoSValidator(
         bytes32 validationID
     ) internal view returns (bool) {
-        StakingManagerStorage storage $ = _getStakingManagerStorage();
-        return $._posValidatorInfo[validationID].owner != address(0);
+        return _getStakingManagerStorage()._posValidatorInfo[validationID].owner != address(0);
+    }
+
+    /**
+     * @dev Throws if `_isPoSValidator` returns `false`.
+     */
+    function _checkPoSValidator(
+        bytes32 validationID
+    ) internal view {
+        if (!_isPoSValidator(validationID)) {
+            revert ValidatorNotPoS(validationID);
+        }
+    }
+
+    /**
+     * @dev Return true if this is a native delegation (i.e. not backed by locked NFTs).
+     */
+    function _isNativeDelegator(
+        bytes32 delegationID
+    ) internal view returns (bool) {
+        return _getStakingManagerStorage()._lockedNFTs[delegationID].length == 0;
+    }
+
+    /**
+     * @dev Throws if `_isNativeDelegator` returns `false`.
+     */
+    function _checkNativeDelegator(
+        bytes32 delegationID
+    ) internal view {
+        if (!_isNativeDelegator(delegationID)) {
+            revert InvalidMethodForNativeDelegation();
+        }
+    }
+
+    /**
+     * @dev Throws if `_isNativeDelegator` returns `true`.
+     */
+    function _checkNFTDelegator(
+        bytes32 delegationID
+    ) internal view {
+        if (_isNativeDelegator(delegationID)) {
+            revert InvalidMethodForNFTDelegation();
+        }
     }
 }
