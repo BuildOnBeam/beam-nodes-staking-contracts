@@ -327,25 +327,7 @@ contract Native721TokenStakingManager is
         uint64 epoch,
         address token,
         uint256 amount
-    ) external onlyOwner nonReentrant {
-        StakingManagerStorage storage $ = _getStakingManagerStorage();
-
-        if (primary) {
-            $._rewardPools[epoch][token] += amount;
-        } else {
-            $._rewardPoolsNFT[epoch][token] += amount;
-        }
-        IERC20(token).transferFrom(_msgSender(), address(this), amount);
-        emit RewardRegistered(primary, epoch, token, amount);
-    }
-
-    /**
-     * @notice See {INative721TokenStakingManager-registerProtocolRewards}.
-     */
-    function registerProtocolRewards(
-        address token,
-        uint256 amount
-    ) external virtual nonReentrant {
+    ) external nonReentrant {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         Native721TokenStakingManagerStorage storage $$ = _getERC721StakingManagerStorage();
 
@@ -364,11 +346,13 @@ contract Native721TokenStakingManager is
             revert InvalidZeroAmount();
         }
 
-        // register primary rewards for next epoch
-        uint64 epoch = getEpoch() + 1;
-        $._rewardPools[epoch][token] += amount;
+        if (primary) {
+            $._rewardPools[epoch][token] += amount;
+        } else {
+            $._rewardPoolsNFT[epoch][token] += amount;
+        }
         IERC20(token).transferFrom(sender, address(this), amount);
-        emit RewardRegistered(true, epoch, token, amount);
+        emit RewardRegistered(primary, epoch, token, amount);
     }
 
     /**

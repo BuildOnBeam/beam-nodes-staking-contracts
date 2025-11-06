@@ -5,10 +5,14 @@ import {FeeFlowControllerNative, SafeTransferLib, WETH} from "../FeeFlowControll
 
 /// @dev Minimal interface for Beam "Native721TokenStakingManager" contract.
 interface IStakingManagerMinimal {
-    function registerProtocolRewards(
+    function registerRewards(
+        bool primary,
+        uint64 epoch,
         address token,
         uint256 amount
     ) external;
+
+    function getEpoch() external view returns (uint64);
 }
 
 /// @title FeeFlowControllerNative - Beam PoS rewards extension
@@ -17,6 +21,7 @@ interface IStakingManagerMinimal {
 contract FeeFlowControllerNativeRewards is FeeFlowControllerNative {
     using SafeTransferLib for WETH;
 
+    IStakingManagerMinimal public immutable stakingManager;
     uint256 public immutable incentiveBps; // 1 == 0.01%; 10_000 == 100%
     uint256 public immutable minNativeBalanceForRegister; // 1e18 == 1 ETH
 
@@ -53,6 +58,7 @@ contract FeeFlowControllerNativeRewards is FeeFlowControllerNative {
         // set config
         incentiveBps = incentiveBps_;
         minNativeBalanceForRegister = minNativeBalanceForRegister_;
+        stakingManager = IStakingManagerMinimal(paymentReceiver_);
     }
 
     /// @dev Sets up rewards on Beam staking contract using all native tokens held in the contract.
@@ -100,12 +106,18 @@ contract FeeFlowControllerNativeRewards is FeeFlowControllerNative {
             paymentToken.approve(paymentReceiver, wethAmount);
 
             // setup rewards on Beam staking contract
-            IStakingManagerMinimal(paymentReceiver)
-                .registerProtocolRewards(address(paymentToken), wethAmount);
+            uint64 nextEpoch = stakingManager.getEpoch() + 1;
+            stakingManager.registerRewards(
+                true, // primary
+                nextEpoch,
+                address(paymentToken),
+                wethAmount
+            );
         }
     }
 
     /// @dev Override handling native token payments.
+    /// @notice Called *after* the user has been reimbursed any excess native tokens.
     function _handleNativePayment(
         address, /* sender */
         uint256 /* paymentAmount */

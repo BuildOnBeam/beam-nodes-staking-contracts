@@ -116,17 +116,6 @@ interface INative721TokenStakingManager is IStakingManager {
     function registerRewards(bool primary, uint64 epoch, address token, uint256 amount) external;
 
     /**
-     * @notice Registers tokens as primary staking rewards for the next epoch.
-     * @dev This function allows the FeeFlow contract to register native tokens as rewards.
-     * @param token The address of the ERC20 token being allocated as a reward.
-     * @param amount The amount of the token to be distributed as rewards.
-     */
-    function registerProtocolRewards(
-        address token,
-        uint256 amount
-    ) external;
-
-    /**
      * @notice Cancels previously registered rewards before the claim period starts.
      * @dev The function allows the contract owner to withdraw unclaimed rewards if the claim period has not begun.
      * @param primary A boolean indicating whether to cancel from the primary reward pool (true) or the NFT pool (false).
