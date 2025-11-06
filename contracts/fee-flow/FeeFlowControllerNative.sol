@@ -116,7 +116,7 @@ contract FeeFlowControllerNative {
         address assetsReceiver,
         uint256 epochId,
         uint256 deadline
-    ) external payable nonReentrant returns (uint256) {
+    ) external payable virtual nonReentrant returns (uint256) {
         return _buy(assets, assetsReceiver, epochId, deadline, msg.value, true);
     }
 
@@ -134,10 +134,43 @@ contract FeeFlowControllerNative {
         uint256 epochId,
         uint256 deadline,
         uint256 maxPaymentTokenAmount
-    ) external nonReentrant returns (uint256) {
+    ) external virtual nonReentrant returns (uint256) {
         if (address(paymentToken) == address(0)) revert NativePaymentsOnly();
 
         return _buy(assets, assetsReceiver, epochId, deadline, maxPaymentTokenAmount, false);
+    }
+
+    /// @dev Internal helper to handle native token payments.
+    /// @param paymentAmount The amount of native tokens to be handled.
+    /// @notice This function transfers the specified amount of native tokens to the payment receiver.
+    function _handleNativePayment(
+        address, /*sender*/
+        uint256 paymentAmount
+    ) internal virtual {
+        // send native tokens to payment receiver
+        if (paymentAmount > 0) {
+            SafeTransferLib.safeTransferETH(paymentReceiver, paymentAmount);
+        }
+    }
+
+    /// @dev Internal helper to handle ERC20 token payments.
+    /// @param paymentAmount The amount of ERC20 tokens to be handled.
+    /// @notice This function transfers the specified amount of ERC20 tokens from the buyer to the auction contract,
+    /// unwraps the WETH tokens, and sends the native tokens to the payment receiver.
+    function _handleERC20Payment(
+        address sender,
+        uint256 paymentAmount
+    ) internal virtual {
+        if (paymentAmount > 0) {
+            /// Payment in WETH (ERC20) tokens - transfer WETH from buyer to auction contract
+            paymentToken.safeTransferFrom(sender, address(this), paymentAmount);
+
+            // unwrap WETH tokens
+            paymentToken.withdraw(paymentAmount);
+
+            // send native tokens to payment receiver
+            SafeTransferLib.safeTransferETH(paymentReceiver, paymentAmount);
+        }
     }
 
     /// @dev Internal helper to buy assets by transferring native/payment tokens and receiving the assets.
@@ -157,7 +190,7 @@ contract FeeFlowControllerNative {
         uint256 deadline,
         uint256 maxPaymentAmount,
         bool isNativePayment
-    ) internal returns (uint256 paymentAmount) {
+    ) internal virtual returns (uint256 paymentAmount) {
         if (block.timestamp > deadline) revert DeadlinePassed();
         if (assets.length == 0) revert EmptyAssets();
 
@@ -171,28 +204,18 @@ contract FeeFlowControllerNative {
 
         if (paymentAmount > maxPaymentAmount) revert MaxPaymentTokenAmountExceeded();
 
-        /// PATCH: Transfer native tokens to payment receiver
+        /// PATCH: Custom handlers for native and ERC20 payments
         if (isNativePayment) {
-            /// Payment in native tokens
-            if (paymentAmount > 0) {
-                // send native tokens to payment receiver
-                SafeTransferLib.safeTransferETH(paymentReceiver, paymentAmount);
-            }
-
-            // send back excess native tokens
+            /// Send back excess native tokens
             if (maxPaymentAmount > paymentAmount) {
                 SafeTransferLib.safeTransferETH(sender, maxPaymentAmount - paymentAmount);
             }
-        } else if (paymentAmount > 0) {
-            /// Payment in WETH (ERC20) tokens
-            // transfer WETH from buyer to auction contract
-            paymentToken.safeTransferFrom(sender, address(this), paymentAmount);
 
-            // unwrap WETH tokens
-            paymentToken.withdraw(paymentAmount);
-
-            // send native tokens to payment receiver
-            SafeTransferLib.safeTransferETH(paymentReceiver, paymentAmount);
+            /// Payment in native tokens
+            _handleNativePayment(sender, paymentAmount);
+        } else {
+            /// Payment in ERC20 tokens
+            _handleERC20Payment(sender, paymentAmount);
         }
 
         for (uint256 i = 0; i < assets.length; ++i) {
@@ -232,7 +255,7 @@ contract FeeFlowControllerNative {
     // If the elapsed time exceeds the epoch period, the price will be 0.
     function _getPriceFromCache(
         Slot0 memory slot0Cache
-    ) internal view returns (uint256) {
+    ) internal view virtual returns (uint256) {
         uint256 timePassed = block.timestamp - slot0Cache.startTime;
 
         if (timePassed > epochPeriod) {
@@ -245,13 +268,13 @@ contract FeeFlowControllerNative {
     /// @dev Calculates the current price
     /// @return price The current price calculated based on the elapsed time and the initial price.
     /// @notice Uses the internal function `_getPriceFromCache` to calculate the current price.
-    function getPrice() external view nonReentrantView returns (uint256) {
+    function getPrice() external view virtual nonReentrantView returns (uint256) {
         return _getPriceFromCache(slot0);
     }
 
     /// @dev Retrieves Slot0 as a memory struct
     /// @return Slot0 The Slot0 value as a Slot0 struct
-    function getSlot0() external view nonReentrantView returns (Slot0 memory) {
+    function getSlot0() external view virtual nonReentrantView returns (Slot0 memory) {
         return slot0;
     }
 }

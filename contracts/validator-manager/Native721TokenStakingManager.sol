@@ -33,7 +33,6 @@ import {Validator, ValidatorStatus, PChainOwner} from "./ACP99Manager.sol";
 import {
     OwnableUpgradeable
 } from "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
-import {IWETH} from "./interfaces/IWETH.sol";
 
 /**
  * @dev Implementation of the {INative721TokenStakingManager} interface.
@@ -53,7 +52,7 @@ contract Native721TokenStakingManager is
     /// @custom:storage-location erc7201:avalanche-icm.storage.Native721TokenStakingManager
     struct Native721TokenStakingManagerStorage {
         IERC721 _token;
-        IWETH _weth;
+        address _protocolRewardsRegistrar;
     }
     // solhint-enable private-vars-leading-underscore
 
@@ -65,11 +64,11 @@ contract Native721TokenStakingManager is
     uint64 public constant REWARD_CLAIM_DELAY = 7 days;
 
     error InvalidNFTAmount(uint256 nftAmount);
-    error InvalidTokenAddress(address tokenAddress);
     error InvalidInputLengths(uint256 inputLength1, uint256 inputLength2);
     error TooEarly(uint256 actualTime, uint256 expectedTime);
     error TooLate(uint256 actualTime, uint256 expectedTime);
-    error NativeBalanceLow();
+    error InvalidZeroAmount();
+    error InvalidZeroAddress();
 
     // solhint-disable ordering
     function _getERC721StakingManagerStorage()
@@ -99,19 +98,19 @@ contract Native721TokenStakingManager is
     function initialize(
         StakingManagerSettings calldata settings,
         IERC721 stakingToken,
-        IWETH weth
-    ) external reinitializer(3) {
+        address protocolRewardsRegistrar
+    ) external reinitializer(10) {
         __Ownable_init(settings.admin);
         __StakingManager_init(settings);
 
         Native721TokenStakingManagerStorage storage $ = _getERC721StakingManagerStorage();
 
-        if (address(stakingToken) == address(0) || address(weth) == address(0)) {
-            revert InvalidTokenAddress(address(0));
+        if (address(stakingToken) == address(0)) {
+            revert InvalidZeroAddress();
         }
 
         $._token = stakingToken;
-        $._weth = weth;
+        $._protocolRewardsRegistrar = protocolRewardsRegistrar;
     }
 
     function onERC721Received(
@@ -343,33 +342,33 @@ contract Native721TokenStakingManager is
     /**
      * @notice See {INative721TokenStakingManager-registerProtocolRewards}.
      */
-    function registerProtocolRewards() external virtual nonReentrant returns (uint256 amount) {
+    function registerProtocolRewards(
+        address token,
+        uint256 amount
+    ) external virtual nonReentrant {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         Native721TokenStakingManagerStorage storage $$ = _getERC721StakingManagerStorage();
 
-        // revert if contract has low native balance
-        amount = address(this).balance;
-        if (amount < 1 ether) {
-            revert NativeBalanceLow();
+        // restrict to only be called by specific contract or owner
+        address sender = _msgSender();
+        if (sender != $$._protocolRewardsRegistrar && sender != owner()) {
+            revert UnauthorizedOwner(sender);
         }
 
-        // send conversion fee to sender
-        uint256 fee = amount / 10000; // 0.01% fee
-        if (fee != 0) {
-            amount -= fee;
-            payable(_msgSender()).sendValue(fee);
+        // input checks
+        if (token == address(0)) {
+            revert InvalidZeroAddress();
         }
 
-        // wrap native tokens locked in contract
-        $$._weth.deposit{value: amount}();
+        if (amount == 0) {
+            revert InvalidZeroAmount();
+        }
 
         // register primary rewards for next epoch
-        address weth = address($$._weth);
-        uint64 nextEpoch = getEpoch() + 1;
-        $._rewardPools[nextEpoch][weth] += amount;
-        emit RewardRegistered(true, nextEpoch, weth, amount);
-
-        return amount;
+        uint64 epoch = getEpoch() + 1;
+        $._rewardPools[epoch][token] += amount;
+        IERC20(token).transferFrom(sender, address(this), amount);
+        emit RewardRegistered(true, epoch, token, amount);
     }
 
     /**
