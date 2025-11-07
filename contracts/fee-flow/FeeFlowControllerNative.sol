@@ -102,7 +102,7 @@ contract FeeFlowControllerNative {
         minInitPrice = minInitPrice_;
     }
 
-    /// @dev Receiver to be able to unwrap WETH programmatically
+    /// @dev Native receiver.
     receive() external payable {}
 
     /// @dev Allows a user to buy assets by sending native tokens and receiving the assets.

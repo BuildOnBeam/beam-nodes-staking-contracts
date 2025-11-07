@@ -11,8 +11,9 @@ import {Native721TokenStakingManager} from "../Native721TokenStakingManager.sol"
 import {StakingManager, StakingManagerSettings} from "../StakingManager.sol";
 import {ExampleRewardCalculator} from "../ExampleRewardCalculator.sol";
 import {ICMInitializable} from "../../utilities/ICMInitializable.sol";
-import {INativeMinter} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/INativeMinter.sol";
+import {
+    INativeMinter
+} from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/INativeMinter.sol";
 import {ValidatorManagerTest} from "./ValidatorManagerTests.t.sol";
 import {Initializable} from "@openzeppelin/contracts@5.0.2/proxy/utils/Initializable.sol";
 import {ACP99Manager, PChainOwner, ConversionData} from "../ACP99Manager.sol";
@@ -25,21 +26,20 @@ import {ExampleERC20} from "@mocks/ExampleERC20.sol";
 import {IERC721} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721Receiver.sol";
 import {console} from "forge-std/console.sol";
-import {OwnableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
 import {
     WarpMessage,
     IWarpMessenger
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {WETH} from "@mocks/WETH.sol";
-import {IWETH} from "../interfaces/IWETH.sol";
 
 contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver {
     Native721TokenStakingManager public app;
 
     ExampleERC721 public stakingToken;
     IERC20 public rewardToken;
-    IWETH weth;
+    address public registrar = address(0xDEAD);
 
     uint128 public constant REWARD_PER_EPOCH = 100e18;
     uint128 public constant REWARD_CLAIM_DELAY = 7 days;
@@ -78,33 +78,29 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
-        app.initialize(defaultPoSSettings, stakingToken, weth);
+        app.initialize(defaultPoSSettings, stakingToken, registrar);
     }
 
     function testInvalidTokenAddress() public {
         app = new Native721TokenStakingManager(ICMInitializable.Allowed);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Native721TokenStakingManager.InvalidTokenAddress.selector, address(0)
-            )
+            abi.encodeWithSelector(Native721TokenStakingManager.InvalidZeroAddress.selector)
         );
 
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
-        app.initialize(defaultPoSSettings, IERC721(address(0)), weth);
+        app.initialize(defaultPoSSettings, IERC721(address(0)), registrar);
     }
 
     function testInvalidWethAddress() public {
         app = new Native721TokenStakingManager(ICMInitializable.Allowed);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                Native721TokenStakingManager.InvalidTokenAddress.selector, address(0)
-            )
+            abi.encodeWithSelector(Native721TokenStakingManager.InvalidZeroAddress.selector)
         );
 
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
-        app.initialize(defaultPoSSettings, stakingToken, IWETH(address(0)));
+        app.initialize(defaultPoSSettings, stakingToken, registrar);
     }
 
     function testZeroMinimumDelegationFee() public {
@@ -114,7 +110,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.minimumDelegationFeeBips = 0;
-        app.initialize(defaultPoSSettings, stakingToken, weth);
+        app.initialize(defaultPoSSettings, stakingToken, registrar);
     }
 
     function testMaxMinimumDelegationFee() public {
@@ -129,7 +125,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.minimumDelegationFeeBips = minimumDelegationFeeBips;
-        app.initialize(defaultPoSSettings, stakingToken, weth);
+        app.initialize(defaultPoSSettings, stakingToken, registrar);
     }
 
     function testInvalidStakeAmountRange() public {
@@ -144,7 +140,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.minimumStakeAmount = DEFAULT_MAXIMUM_STAKE_AMOUNT;
         defaultPoSSettings.maximumStakeAmount = DEFAULT_MINIMUM_STAKE_AMOUNT;
-        app.initialize(defaultPoSSettings, stakingToken, weth);
+        app.initialize(defaultPoSSettings, stakingToken, registrar);
     }
 
     function testZeroWeightToValueFactor() public {
@@ -154,7 +150,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.weightToValueFactor = 0;
-        app.initialize(defaultPoSSettings, stakingToken, weth);
+        app.initialize(defaultPoSSettings, stakingToken, registrar);
     }
 
     function testMinStakeDurationTooLow() public {
@@ -169,7 +165,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
         defaultPoSSettings.minimumStakeDuration = minStakeDuration;
-        app.initialize(defaultPoSSettings, stakingToken, weth);
+        app.initialize(defaultPoSSettings, stakingToken, registrar);
     }
 
     function testInvalidValidatorManager() public {
@@ -181,14 +177,14 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         StakingManagerSettings memory settings = _defaultPoSSettings();
         settings.manager = ValidatorManager(address(invalidManager));
-        app.initialize(settings, stakingToken, weth);
+        app.initialize(settings, stakingToken, registrar);
     }
 
     function testUnsetValidatorManager() public {
         app = new Native721TokenStakingManager(ICMInitializable.Allowed);
         vm.expectRevert();
 
-        app.initialize(_defaultPoSSettings(), stakingToken, weth); // settings.manager is not set
+        app.initialize(_defaultPoSSettings(), stakingToken, registrar); // settings.manager is not set
     }
 
     function testNFTDelegationOverWeightLimit() public {
@@ -313,6 +309,11 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         app.registerRewards(true, 0, address(rewardToken), REWARD_PER_EPOCH);
     }
 
+    function testRewardRegistrationFeeFlow() public {
+        vm.prank(registrar);
+        app.registerRewards(true, 0, address(rewardToken), 5 ether);
+    }
+
     function testRewardCancellationTooLate() public {
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -347,8 +348,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         vm.warp(DEFAULT_DELEGATOR_END_DELEGATION_TIMESTAMP);
 
         _initiateNFTDelegatorRemoval({
-            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS,
-            delegationID: delegationID
+            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS, delegationID: delegationID
         });
 
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
@@ -546,8 +546,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         });
 
         _initiateNFTDelegatorRemoval({
-            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS,
-            delegationID: delegationID
+            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS, delegationID: delegationID
         });
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         _completeNFTDelegatorRemoval(DEFAULT_DELEGATOR_ADDRESS, delegationID);
@@ -647,8 +646,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         });
 
         _initiateNFTDelegatorRemoval({
-            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS,
-            delegationID: nftDelegationID
+            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS, delegationID: nftDelegationID
         });
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         _completeNFTDelegatorRemoval(DEFAULT_DELEGATOR_ADDRESS, nftDelegationID);
@@ -744,8 +742,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         vm.warp(block.timestamp + DEFAULT_MINIMUM_STAKE_DURATION + 1);
 
         _initiateNFTDelegatorRemoval({
-            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS,
-            delegationID: delegationID
+            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS, delegationID: delegationID
         });
 
         vm.expectRevert(
@@ -773,8 +770,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         // completes the delegation as validation already ended
         _initiateNFTDelegatorRemoval({
-            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS,
-            delegationID: delegationID
+            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS, delegationID: delegationID
         });
         vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION);
         _completeNFTDelegatorRemoval(DEFAULT_DELEGATOR_ADDRESS, delegationID);
@@ -794,8 +790,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
             )
         );
         _initiateNFTDelegatorRemoval({
-            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS,
-            delegationID: delegationID
+            delegatorAddress: DEFAULT_DELEGATOR_ADDRESS, delegationID: delegationID
         });
     }
 
@@ -895,52 +890,6 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         assertEq(extraToken.balanceOf(address(app)), amount - half);
         assertEq(extraToken.balanceOf(address(this)), half);
-    }
-
-    // Protocol rewards
-    function testRegisterProtocolRewardsRevertsIfLowBalance() public {
-        // Ensure contract has less than 1 ether
-        uint256 initialBalance = 0.5 ether;
-        vm.deal(address(app), initialBalance);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(Native721TokenStakingManager.NativeBalanceLow.selector)
-        );
-        app.registerProtocolRewards();
-    }
-
-    function testFuzzRegisterProtocolRewardsWrapsAndRegisters(
-        uint256 initialBalance
-    ) public {
-        // Fund contract with n ether
-        initialBalance = bound(initialBalance, 1 ether, 10_000_000 ether);
-        vm.deal(address(app), initialBalance);
-
-        // Track caller balance before
-        uint256 callerBalanceBefore = address(this).balance;
-
-        // Expect fee to be sent to caller
-        uint256 expectedFee = initialBalance / 10000;
-        uint256 expectedDeposit = initialBalance - expectedFee;
-
-        // Expect WETH deposit
-        vm.expectCall(address(weth), abi.encodeWithSelector(IWETH.deposit.selector));
-
-        // Call registerProtocolRewards
-        uint256 returnedAmount = app.registerProtocolRewards();
-
-        // Check returned amount
-        assertEq(returnedAmount, expectedDeposit);
-
-        // Check fee received
-        assertEq(address(this).balance, callerBalanceBefore + expectedFee);
-
-        // Check WETH balance of contract
-        assertEq(IERC20(address(weth)).balanceOf(address(app)), expectedDeposit);
-
-        // Check reward pool for next epoch
-        uint64 nextEpoch = app.getEpoch() + 1;
-        assertEq(app.getRewards(true, nextEpoch, address(weth), address(this)), 0); // no weight yet
     }
 
     // Helpers
@@ -1044,11 +993,17 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
     }
 
     // solhint-disable no-empty-blocks
-    function _beforeSend(uint256 amount, address spender) internal override {
+    function _beforeSend(
+        uint256 amount,
+        address spender
+    ) internal override {
         // Native tokens no need pre approve
     }
 
-    function _beforeSendNFT(uint256 tokenId, address spender) internal {
+    function _beforeSendNFT(
+        uint256 tokenId,
+        address spender
+    ) internal {
         stakingToken.transferFrom(address(this), spender, tokenId);
 
         vm.prank(spender);
@@ -1056,18 +1011,31 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
     }
     // solhint-enable no-empty-blocks
 
-    function _expectStakeUnlock(address account, uint256 amount) internal override {
+    function _expectStakeUnlock(
+        address account,
+        uint256 amount
+    ) internal override {
         // empty calldata implies the receive function will be called
         vm.expectCall(account, amount, "");
     }
 
-    function _expectNFTStakeUnlock(address account, uint256 amount) internal view {
+    function _expectNFTStakeUnlock(
+        address account,
+        uint256 amount
+    ) internal view {
         assertEq(stakingToken.balanceOf(account), amount);
     }
 
-    function _expectRewardIssuance(address account, uint256 amount) internal override {}
+    function _expectRewardIssuance(
+        address account,
+        uint256 amount
+    ) internal override {}
 
-    function _claimReward(bool primary, address account, uint256 expectedAmount) internal {
+    function _claimReward(
+        bool primary,
+        address account,
+        uint256 expectedAmount
+    ) internal {
         uint256 balanceBefore = rewardToken.balanceOf(account);
 
         address[] memory tokens = new address[](1);
@@ -1080,7 +1048,10 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         assertApproxEqRel(expectedAmount, rewardToken.balanceOf(account) - balanceBefore, 0.1e18);
     }
 
-    function _submitUptime(bytes32 validationID, uint64 uptime) internal {
+    function _submitUptime(
+        bytes32 validationID,
+        uint64 uptime
+    ) internal {
         bytes memory uptimeMessage =
             ValidatorMessages.packValidationUptimeMessage(validationID, uptime);
         _mockGetUptimeWarpMessage(uptimeMessage, true);
@@ -1104,8 +1075,6 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         rewardToken = new ExampleERC20();
         stakingToken = new ExampleERC721();
         rewardCalculator = new ExampleRewardCalculator(DEFAULT_REWARD_RATE);
-        WETH _weth = new WETH();
-        weth = IWETH(address(_weth));
 
         stakingToken.setApprovalForAll(address(app), true);
 
@@ -1113,12 +1082,18 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         defaultPoSSettings.manager = validatorManager;
 
         validatorManager.initialize(_defaultSettings(address(app)));
-        app.initialize(defaultPoSSettings, stakingToken, weth);
+        app.initialize(defaultPoSSettings, stakingToken, registrar);
 
         rewardToken.approve(address(app), REWARD_PER_EPOCH * 2);
 
         app.registerRewards(true, 0, address(rewardToken), REWARD_PER_EPOCH);
         app.registerRewards(false, 0, address(rewardToken), REWARD_PER_EPOCH);
+
+        vm.startPrank(registrar);
+        vm.deal(registrar, 10 ether);
+        ExampleERC20(address(rewardToken)).mint(10 ether);
+        rewardToken.approve(address(app), type(uint256).max);
+        vm.stopPrank();
 
         stakingManager = app;
 
