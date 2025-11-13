@@ -18,14 +18,15 @@ interface IStakingManagerMinimal {
 /// @title FeeFlowControllerNative - Beam PoS rewards extension
 /// @author xtools-at @ Beam Labs
 /// @notice Uses funds collected in native currency to set up WETH rewards for Beam PoS.
-contract FeeFlowControllerNativeRewards is FeeFlowControllerNative {
+contract FeeFlowRewards is FeeFlowControllerNative {
     using SafeTransferLib for WETH;
 
-    IStakingManagerMinimal public immutable stakingManager;
     uint256 public immutable incentiveBps; // 1 == 0.01%; 10_000 == 100%
     uint256 public immutable minNativeBalanceForRegister; // 1e18 == 1 ETH
+    IStakingManagerMinimal internal immutable stakingManager;
 
     error NativeBalanceTooLow(uint256 currentBalance);
+    error InvalidZeroAddress();
     error InvalidConfiguration(uint256 value);
 
     /// @dev Initializes the FeeFlowControllerNative contract, and sets up rewards configuration.
@@ -35,7 +36,7 @@ contract FeeFlowControllerNativeRewards is FeeFlowControllerNative {
     constructor(
         uint256 initPrice,
         address wethAddress,
-        address paymentReceiver_,
+        address stakingManager_, // == paymentReceiver
         uint256 epochPeriod_,
         uint256 priceMultiplier_,
         uint256 minInitPrice_,
@@ -43,7 +44,7 @@ contract FeeFlowControllerNativeRewards is FeeFlowControllerNative {
         uint256 minNativeBalanceForRegister_
     )
         FeeFlowControllerNative(
-            initPrice, wethAddress, paymentReceiver_, epochPeriod_, priceMultiplier_, minInitPrice_
+            initPrice, wethAddress, stakingManager_, epochPeriod_, priceMultiplier_, minInitPrice_
         )
     {
         // check input
@@ -55,15 +56,25 @@ contract FeeFlowControllerNativeRewards is FeeFlowControllerNative {
             revert InvalidConfiguration(minNativeBalanceForRegister_);
         }
 
+        if (stakingManager_ == address(0) || wethAddress == address(0)) {
+            revert InvalidZeroAddress();
+        }
+
         // set config
         incentiveBps = incentiveBps_;
         minNativeBalanceForRegister = minNativeBalanceForRegister_;
-        stakingManager = IStakingManagerMinimal(paymentReceiver_);
+        stakingManager = IStakingManagerMinimal(stakingManager_);
     }
 
     /// @dev Sets up rewards on Beam staking contract using all native tokens held in the contract.
+    /// @return incentiveAmount The amount of native tokens paid as incentive to the caller.
     /// @notice Caller receives an incentive for triggering this function; minimum native balance required.
-    function registerBlockGasRewards() external virtual {
+    function registerBlockGasRewards()
+        external
+        virtual
+        nonReentrant
+        returns (uint256 incentiveAmount)
+    {
         // wrap native tokens into WETH
         uint256 wethAmount = _wrapAllNativeTokens();
         if (wethAmount < minNativeBalanceForRegister) {
@@ -72,13 +83,15 @@ contract FeeFlowControllerNativeRewards is FeeFlowControllerNative {
         }
 
         // pay incentive to caller
-        uint256 incentiveAmount = wethAmount / 10_000 * incentiveBps;
+        incentiveAmount = wethAmount * incentiveBps / 10_000;
         if (incentiveAmount > 0) {
             paymentToken.safeTransfer(msg.sender, incentiveAmount);
         }
 
         // register remaining rewards on Beam staking contract
         _registerRewards(wethAmount - incentiveAmount);
+
+        return incentiveAmount;
     }
 
     /// @dev Wraps *all* native tokens locked in the contract into WETH.

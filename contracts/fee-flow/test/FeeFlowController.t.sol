@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "./lib/MockToken.sol";
 import "./lib/ReenteringMockToken.sol";
 import "./lib/PredictAddress.sol";
-import "./lib/OverflowableEpochIdFeeFlowController.sol";
+import {OverflowableEpochIdFeeFlowController} from "./lib/OverflowableEpochIdFeeFlowController.sol";
 import "../FeeFlowController.sol";
 
 contract FeeFlowControllerTest is Test {

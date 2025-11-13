@@ -59,16 +59,6 @@ Fee Flow has been audited by Zellic, Ottersec and Team Omega. You can find the a
 
 **No warranties are provided** and **no liability will be accepted for any loss** incurred through the use of this codebase.
 
-## Notes
-
-1. Some tokens that are have some value but change their balance in a case of a real execution vs staticCall execution might bait a buy that transfers the payment amount but the received value is 0 for example. It would be more of a phishing attack if anyone can deploy a fee flow controller.
-
-2. (INFO) Fee on transfer tokens might cause the emit of incorrect event amounts. Something to keep in mind.
-
-3. (INFO) for gas optimization you can transfer the whole balance -1 wei to keep the slot non-zero. This will keep the gas cost constant and more predictable as well.
-
-4. The init price casting has some edge cases where the price can go above uint128 and then it will be casted to uint128. This can be mitigated by setting the max price to uint128(-1) and then casting to uint128. This will make sure that the price will never go above uint128. The fix to this is in the FeeFlowController.sol.patch file.
-
 ## License
 
 Licensed under the [GPL-2.0-or-later](https://github.com/euler-xyz/fee-flow/blob/main/LICENSE) license.

@@ -5,7 +5,9 @@ import "forge-std/Test.sol";
 import "./lib/MockToken.sol";
 import "./lib/ReenteringMockToken.sol";
 import "./lib/PredictAddress.sol";
-import "./lib/OverflowableEpochIdFeeFlowController.sol";
+import {
+    OverflowableEpochIdFeeFlowControllerNative as OverflowableEpochIdFeeFlowController
+} from "./lib/OverflowableEpochIdFeeFlowController.sol";
 import "../FeeFlowControllerNative.sol";
 import {WETH} from "@solmate/tokens/WETH.sol";
 
@@ -63,7 +65,10 @@ contract FeeFlowControllerTest is Test {
         vm.stopPrank();
     }
 
-    function _mintWeth(address receiver, uint256 amount) internal {
+    function _mintWeth(
+        address receiver,
+        uint256 amount
+    ) internal {
         vm.deal(receiver, amount);
         vm.prank(receiver);
         paymentToken.deposit{value: amount}();

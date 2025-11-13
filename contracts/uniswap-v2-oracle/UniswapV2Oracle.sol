@@ -4,7 +4,9 @@ pragma solidity ^0.8.25;
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
@@ -58,13 +60,23 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         USDC = usdc;
     }
 
-    function initialize(address router, address usdc, address initialOwner) public initializer {
+    function initialize(
+        address router,
+        address usdc,
+        address initialOwner
+    ) public initializer {
         __UniswapV2Oracle_init(router, usdc, initialOwner);
     }
 
     // Main public getters
 
     function getTokenPrice(
+        address token
+    ) public view virtual returns (TokenPrice memory) {
+        return _getTokenPrice(token);
+    }
+
+    function getTokenPrices(
         address[] memory tokens
     ) public view virtual returns (TokenPrice[] memory result) {
         result = new TokenPrice[](tokens.length);
@@ -77,7 +89,14 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         return result;
     }
 
-    function getTokenPrice(
+    function getTokenPriceForAmount(
+        address token,
+        uint256 tokenAmount
+    ) public view virtual returns (TokenPrice memory) {
+        return _getTokenPrice(token, tokenAmount);
+    }
+
+    function getTokenPricesForAmounts(
         address[] memory tokens,
         uint256[] memory tokenAmounts
     ) public view virtual returns (TokenPrice[] memory result) {
@@ -95,7 +114,14 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         return result;
     }
 
-    function getTokenPrice(
+    function getTokenPriceForOwner(
+        address token,
+        address owner
+    ) public view virtual returns (TokenPrice memory) {
+        return _getTokenPrice(token, owner);
+    }
+
+    function getTokenPricesForOwner(
         address[] memory tokens,
         address owner
     ) public view virtual returns (TokenPrice[] memory result) {
@@ -347,10 +373,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     function _isContract(
         address token
     ) internal view virtual returns (bool) {
-        if (token.code.length == 0) {
-            return false;
-        }
-        return true;
+        return (token.code.length != 0);
     }
 
     // Internal: upgrades

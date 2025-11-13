@@ -11,9 +11,6 @@ import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {IWETH} from "../interfaces/IWETH.sol";
 import {ExampleERC20 as ERC20} from "../mocks/ExampleERC20.sol";
 
-/**
- * Run using `forge test -vvv`
- */
 contract UniswapV2OracleForkTest is Test {
     address owner = address(this);
 
@@ -58,8 +55,9 @@ contract UniswapV2OracleForkTest is Test {
 
         // Deploy the Oracle contract using ERC1967Proxy
         UniswapV2Oracle impl = new UniswapV2Oracle();
-        bytes memory initData =
-            abi.encodeWithSelector(UniswapV2Oracle.initialize.selector, UNISWAP_ROUTER, USDC, owner);
+        bytes memory initData = abi.encodeWithSelector(
+            UniswapV2Oracle.initialize.selector, UNISWAP_ROUTER, USDC, owner
+        );
 
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         oracle = UniswapV2Oracle(address(proxy));

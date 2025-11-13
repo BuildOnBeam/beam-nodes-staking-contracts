@@ -21,7 +21,7 @@ contract FeeFlowControllerNative {
     uint256 public constant ABS_MAX_INIT_PRICE = type(uint192).max; // chosen so that initPrice * priceMultiplier does not exceed uint256
     uint256 public constant PRICE_MULTIPLIER_SCALE = 1e18;
 
-    WETH public immutable paymentToken; // PATCH: must be WETH
+    WETH public immutable paymentToken; // PATCH: must be WETH (or 0x0 for native-only)
     address public immutable paymentReceiver;
     uint256 public immutable epochPeriod;
     uint256 public immutable priceMultiplier;
@@ -76,7 +76,7 @@ contract FeeFlowControllerNative {
     /// @notice This constructor performs parameter validation and sets the initial values for the contract.
     constructor(
         uint256 initPrice,
-        address wethAddress, // PATCH: paymentToken must be WETH
+        address wethAddress, // PATCH: paymentToken must be WETH (or 0x0 for native-only)
         address paymentReceiver_,
         uint256 epochPeriod_,
         uint256 priceMultiplier_,
