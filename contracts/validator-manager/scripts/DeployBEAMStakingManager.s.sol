@@ -48,7 +48,7 @@ contract DeployBEAMStakingManager is Script {
     // uint256 constant WEIGHT_TO_VALUE_FACTOR = 1e18;
     // bytes32 constant UPTIME_BLOCKCHAIN_ID = bytes32(hex"f94107902c8418dfcdf51d3f95429688abc7109e0f5b0e806c7e204d542e0761"); //mainnet
     // address constant WETH_ADDRESS = address(0xF65B6f9c94187276C7d91F4F74134751d248bFeA);
-    // address constant FEE_FLOW_ADDRESS = address(0x70D0); // TODO:
+    // address constant FEE_FLOW_ADDRESS = address(0xb25DeeFfBedd8a7149d634AEEc864C9a6Beb61c9);
 
     address constant NFT_TOKEN_ADDRESS = address(0x732080D7aD6A9C50039d7Ad7F5BD0a79670f7654);
     address constant ADMIN_ADDRESS = address(0xd68F802fD0B6f56524F379805DD8FcC152DB9d5c);

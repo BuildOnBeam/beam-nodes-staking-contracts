@@ -44,7 +44,7 @@ contract GenerateStakingManagerDataTestnet is Script {
     uint64 constant EPOCH_OFFSET = 0;
     address constant UPTIME_KEEPER = address(0xd68F802fD0B6f56524F379805DD8FcC152DB9d5c);
     // address constant WETH_ADDRESS = address(0xF65B6f9c94187276C7d91F4F74134751d248bFeA);
-    address constant FEE_FLOW_ADDRESS = address(0x70D0); // TODO:
+    address constant FEE_FLOW_ADDRESS = address(0xb25DeeFfBedd8a7149d634AEEc864C9a6Beb61c9);
 
     function run() external {
         // Add settings struct for initialization
