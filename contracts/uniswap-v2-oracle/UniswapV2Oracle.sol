@@ -93,7 +93,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address token,
         uint256 tokenAmount
     ) public view virtual returns (TokenPrice memory) {
-        return _getTokenPrice(token, tokenAmount);
+        return _getTokenPriceForAmount(token, tokenAmount);
     }
 
     function getTokenPricesForAmounts(
@@ -108,7 +108,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         uint256 len = tokens.length;
 
         for (uint256 i; i < len; ++i) {
-            result[i] = _getTokenPrice(tokens[i], tokenAmounts[i]);
+            result[i] = _getTokenPriceForAmount(tokens[i], tokenAmounts[i]);
         }
 
         return result;
@@ -118,7 +118,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         address token,
         address owner
     ) public view virtual returns (TokenPrice memory) {
-        return _getTokenPrice(token, owner);
+        return _getTokenPriceForOwner(token, owner);
     }
 
     function getTokenPricesForOwner(
@@ -129,7 +129,7 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         uint256 len = tokens.length;
 
         for (uint256 i; i < len; ++i) {
-            result[i] = _getTokenPrice(tokens[i], owner);
+            result[i] = _getTokenPriceForOwner(tokens[i], owner);
         }
 
         return result;
@@ -279,27 +279,23 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         return result;
     }
 
-    function _getTokenPrice(
+    function _getTokenPriceForAmount(
         address token,
         uint256 tokenAmount
     ) internal view virtual returns (TokenPrice memory result) {
         result = _getTokenPrice(token);
-        if (tokenAmount == 0) {
-            return result;
-        }
-
         result.tokenAmount = tokenAmount;
         result.usdcValue = tokenToUSDC(token, tokenAmount);
 
         return result;
     }
 
-    function _getTokenPrice(
+    function _getTokenPriceForOwner(
         address token,
         address owner
-    ) internal view virtual returns (TokenPrice memory result) {
+    ) internal view virtual returns (TokenPrice memory) {
         uint256 balance = IERC20(token).balanceOf(owner);
-        return _getTokenPrice(token, balance);
+        return _getTokenPriceForAmount(token, balance);
     }
 
     function _toTokenAmount(
@@ -316,17 +312,21 @@ contract UniswapV2Oracle is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                     resolveLPToken(fromToken, fromAmount);
                 uint256 value0 = _getToTokenAmount(token0, toToken, amount0);
                 uint256 value1 = _getToTokenAmount(token1, toToken, amount1);
+
                 return value0 + value1;
             } else if (isLPToken(toToken)) {
-                // normalize to 1 LP token
+                // normalize value to 1/10_000 LP, to handle low-supply LP tokens better
                 (address token0, uint256 lpAmount0, address token1, uint256 lpAmount1) =
-                    resolveLPToken(toToken, 1e18);
+                    resolveLPToken(toToken, 1e14);
 
-                // figure out how much "fromToken" is needed to mint 1 LP
+                // figure out how much "fromToken" is required to buy 1/10_000 LP token's worth of underlying tokens
                 uint256 fromFor0 = _getFromTokenAmount(fromToken, token0, lpAmount0);
                 uint256 fromFor1 = _getFromTokenAmount(fromToken, token1, lpAmount1);
-                uint256 totalFromFor1LP = fromFor0 + fromFor1;
 
+                // normalize required "fromToken" amounts to 1 LP
+                uint256 totalFromFor1LP = (fromFor0 + fromFor1) * 1e4;
+
+                // convert the original "fromAmount" to "toAmount" based on calculated exchange rate
                 if (totalFromFor1LP > 0) {
                     return (fromAmount * 1e18) / totalFromFor1LP;
                 }

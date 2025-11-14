@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-// run via `forge test -vvv --match-path "contracts/uniswap-v2-oracle/test/UniswapV2OracleFork.t.sol"`
+// run via `forge test -vvv --match-path "contracts/uniswap-v2-oracle/test/UniswapV2OracleForkTestnet.t.sol"`
 pragma solidity ^0.8.25;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UniswapV2Oracle} from "../UniswapV2Oracle.sol";
 import {IUniswapV2Pair} from "../interfaces/IUniswapV2Pair.sol";
@@ -11,23 +11,25 @@ import {IUniswapV2Factory} from "../interfaces/IUniswapV2Factory.sol";
 import {IWETH} from "../interfaces/IWETH.sol";
 import {ExampleERC20 as ERC20} from "../mocks/ExampleERC20.sol";
 
-contract UniswapV2OracleForkTest is Test {
+contract UniswapV2OracleForkTestnet is Test {
     address owner = address(this);
 
     // Network fork configuration
-    uint256 constant beamForkBlock = 6139707;
-    string constant beamForkRpc = "https://subnets.avax.network/beam/mainnet/rpc";
-    address constant UNISWAP_ROUTER = 0x965B104e250648d01d4B3b72BaC751Cde809D29E; // UniswapV2Router address
-    address constant USDC = 0x76BF5E7d2Bcb06b1444C0a2742780051D8D0E304; // USDC token address
+    uint256 constant beamForkBlock = 1_740_425;
+    string constant beamForkRpc = "https://subnets.avax.network/beam/testnet/rpc";
+    address constant UNISWAP_ROUTER = 0xB4cFBc4836c5a0Eb27A502B6008f9baF3Bf8b3Ee; // UniswapV2Router address
+    address constant USDC = 0x007Fdc86FD12924C9116025C7F594843087397E3; // USDC token address
     // - Real holder addresses on the forked network
-    address constant user1 = address(0x191C3a109770100b439124c35990103584a62f1d); // holds 30k USDC
+    address constant user1 = address(0xbFb53a2c470cdb4FF32eE4F18A93B98F9f55D0E1); // holds 30k USDC
 
     // Test contracts
     IUniswapV2Router router = IUniswapV2Router(UNISWAP_ROUTER);
     ERC20 usdc = ERC20(USDC);
     IUniswapV2Factory factory;
     UniswapV2Oracle oracle;
-    IUniswapV2Pair poolAVAX = IUniswapV2Pair(address(0xA53DaFAe314075C6a22f44eEb7Df792D672f89d5));
+    IUniswapV2Pair poolUSDT = IUniswapV2Pair(address(0xF5C0a13a53D7216fced72Be56253b083240b27db));
+    IUniswapV2Pair poolUSDC = IUniswapV2Pair(address(0xA9EA3e595E5b8D0fF3aa4fA3A488ee44d39E357a));
+    IUniswapV2Pair poolAVAX = IUniswapV2Pair(address(0xF1D464566a5561a058ea271FB25f3Db715E9da9d));
     IWETH weth;
     ERC20 tokenA;
     ERC20 tokenB;
@@ -111,6 +113,7 @@ contract UniswapV2OracleForkTest is Test {
         );
         address aw_ = factory.getPair(address(tokenA), address(weth));
         poolAW = IUniswapV2Pair(aw_);
+        vm.label(aw_, "LP-AW");
         lpBalanceAW = poolAW.balanceOf(owner);
 
         // - B & WETH
@@ -126,6 +129,7 @@ contract UniswapV2OracleForkTest is Test {
         );
         address bw_ = factory.getPair(address(tokenB), address(weth));
         poolBW = IUniswapV2Pair(bw_);
+        vm.label(bw_, "LP-BW");
         lpBalanceBW = poolBW.balanceOf(owner);
     }
 
@@ -238,10 +242,11 @@ contract UniswapV2OracleForkTest is Test {
         address[] memory tokens = new address[](1);
         tokens[0] = address(poolAW);
         UniswapV2Oracle.TokenPrice[] memory prices = oracle.getTokenPrices(tokens);
+        console.log("LP-AW to USDC value:", prices[0].usdcPrice);
         assertEq(prices.length, 1);
         assertEq(prices[0].token, address(poolAW));
-        assertEq(prices[0].name, "Uniswap V2 WMC/MOCK");
-        assertEq(prices[0].symbol, "LP-WMC/MOCK");
+        assertEq(prices[0].name, "Uniswap V2 MOCK/WMC");
+        assertEq(prices[0].symbol, "LP-MOCK/WMC");
         assertEq(prices[0].decimals, 18);
         assertGt(prices[0].usdcPrice, 0);
     }
@@ -250,10 +255,35 @@ contract UniswapV2OracleForkTest is Test {
         address[] memory tokens = new address[](1);
         tokens[0] = address(poolAVAX);
         UniswapV2Oracle.TokenPrice[] memory prices = oracle.getTokenPrices(tokens);
+        console.log("LP-AVAX to USDC value:", prices[0].usdcPrice);
         assertEq(prices.length, 1);
         assertEq(prices[0].token, address(poolAVAX));
         assertEq(prices[0].decimals, 18);
         assertGt(prices[0].usdcPrice, 0);
+    }
+
+    function test_GetTokenPriceLPTokenAVAXSingle() public view {
+        UniswapV2Oracle.TokenPrice memory price = oracle.getTokenPrice(address(poolAVAX));
+        console.log("LP-AVAX to USDC value:", price.usdcPrice);
+        assertEq(price.token, address(poolAVAX));
+        assertEq(price.decimals, 18);
+        assertGt(price.usdcPrice, 0);
+    }
+
+    function test_GetTokenPriceLPTokenUSDT() public view {
+        UniswapV2Oracle.TokenPrice memory price = oracle.getTokenPrice(address(poolUSDT));
+        console.log("LP-USDT to USDC value:", price.usdcPrice);
+        assertEq(price.token, address(poolUSDT));
+        assertEq(price.decimals, 18);
+        assertGt(price.usdcPrice, 0);
+    }
+
+    function test_GetTokenPriceLPTokenUSDC() public view {
+        UniswapV2Oracle.TokenPrice memory price = oracle.getTokenPrice(address(poolUSDC));
+        console.log("LP-USDC to USDC value:", price.usdcPrice);
+        assertEq(price.token, address(poolUSDC));
+        assertEq(price.decimals, 18);
+        assertGt(price.usdcPrice, 0);
     }
 
     function test_GetTokenPriceWithAmounts() public view {
@@ -397,9 +427,9 @@ contract UniswapV2OracleForkTest is Test {
             oracle.resolveLPToken(address(poolAW), lpBalanceAW);
         assertEq(t0, poolAW.token0());
         assertEq(t1, poolAW.token1());
-        assertEq(address(weth), t0);
-        assertEq(POOL_AMOUNT_WETH_AW, a0);
-        assertEq(POOL_AMOUNT_A_AW, a1);
+        assertEq(address(weth), t1, "weth mismatch");
+        assertEq(POOL_AMOUNT_WETH_AW, a1);
+        assertEq(POOL_AMOUNT_A_AW, a0);
     }
 
     function test_ResolveLPTokenB() public view {
@@ -500,18 +530,21 @@ contract UniswapV2OracleForkTest is Test {
     function test_TokenToUSDCBaseLPToken() public view {
         uint256 lpAmount = 1e18;
         uint256 value = oracle.tokenToUSDC(address(poolAW), lpAmount);
+        console.log("AW to USDC value:", value);
         assertTrue(value > 0);
     }
 
     function test_UsdcToTokenBaseLPToken() public view {
         uint256 usdcAmount = 1e6;
         uint256 lp = oracle.usdcToToken(address(poolAW), usdcAmount);
+        console.log("1 USDC to LP amount:", lp);
         assertTrue(lp > 0);
     }
 
     function test_TokenToTokenBaseLPToken() public view {
         uint256 amount = 1e18;
         uint256 value = oracle.tokenToToken(address(poolAW), address(tokenA), amount);
+        console.log("AW to A value:", value);
         assertTrue(value > 0);
     }
 
