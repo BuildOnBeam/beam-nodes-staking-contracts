@@ -130,7 +130,7 @@ contract NFTRedeemerTest is Test {
     address burner = address(0xDEAD);
 
     uint256 normalAmount = 1 ether;
-    uint256 discountedAmount = 0.5 ether;
+    uint256 discountedAmount = 0.3 ether;
 
     function setUp() public {
         // Deploy mock NFT and redeemer
@@ -161,7 +161,7 @@ contract NFTRedeemerTest is Test {
 
     /* ============ Helper utils ============ */
 
-    function fundRedeemer(
+    function _fundRedeemer(
         uint256 amount
     ) internal {
         // send ETH to redeemer
@@ -173,22 +173,13 @@ contract NFTRedeemerTest is Test {
     function assertBitSet(
         uint256 tokenId
     ) internal view {
-        uint256 slot = tokenId >> 8;
-        uint256 bit = tokenId & 0xFF;
-        uint256 word = redeemer.discountBitmap(slot);
-        // mask check
-        assertTrue((word & (1 << bit)) != 0, "expected bit set");
-        assertTrue(redeemer.isAlternate(tokenId), "expected isDiscounted true");
+        assertTrue(redeemer.isTokenAlternate(tokenId), "expected isDiscounted true");
     }
 
     function assertBitUnset(
         uint256 tokenId
     ) internal view {
-        uint256 slot = tokenId >> 8;
-        uint256 bit = tokenId & 0xFF;
-        uint256 word = redeemer.discountBitmap(slot);
-        assertTrue((word & (1 << bit)) == 0, "expected bit unset");
-        assertFalse(redeemer.isAlternate(tokenId), "expected isDiscounted false");
+        assertFalse(redeemer.isTokenAlternate(tokenId), "expected isDiscounted false");
     }
 
     function assertBurned(
@@ -208,7 +199,7 @@ contract NFTRedeemerTest is Test {
 
         // call setDiscountedBatch as owner
         vm.prank(owner);
-        redeemer.setAlternateBatch(tokenIds, true);
+        redeemer.setTokenAlternateBatch(tokenIds, true);
 
         // verify bits set in correct slots
         assertBitSet(5);
@@ -223,10 +214,10 @@ contract NFTRedeemerTest is Test {
 
         // call setDiscounted as owner
         vm.startPrank(owner);
-        redeemer.setAlternate(1, true);
-        redeemer.setAlternate(2000, true);
-        redeemer.setAlternate(40000, true);
-        redeemer.setAlternate(60000, true);
+        redeemer.setTokenAlternate(1, true);
+        redeemer.setTokenAlternate(2000, true);
+        redeemer.setTokenAlternate(40000, true);
+        redeemer.setTokenAlternate(60000, true);
         vm.stopPrank();
 
         // verify bits set in correct slots
@@ -251,14 +242,14 @@ contract NFTRedeemerTest is Test {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 5;
         vm.prank(owner);
-        redeemer.setAlternateBatch(tokenIds, true);
+        redeemer.setTokenAlternateBatch(tokenIds, true);
 
         // alice must approve redeemer to burn her token
         vm.prank(alice);
         mockNft.approve(address(redeemer), 5);
 
         // fund redeemer with discounted amount
-        fundRedeemer(discountedAmount);
+        _fundRedeemer(discountedAmount);
 
         uint256 aliceBalanceBefore = alice.balance;
         // perform redeem as alice
@@ -279,7 +270,7 @@ contract NFTRedeemerTest is Test {
         mockNft.approve(address(redeemer), 100);
 
         // fund redeemer
-        fundRedeemer(normalAmount);
+        _fundRedeemer(normalAmount);
 
         uint256 bobBefore = bob.balance;
         vm.prank(bob);
@@ -296,7 +287,7 @@ contract NFTRedeemerTest is Test {
         toSet[1] = 20000;
         toSet[2] = 50000;
         vm.prank(owner);
-        redeemer.setAlternateBatch(toSet, true);
+        redeemer.setTokenAlternateBatch(toSet, true);
 
         // Approve tokens to contract for burning
         vm.prank(alice);
@@ -308,7 +299,7 @@ contract NFTRedeemerTest is Test {
         uint256 totalExpected = discountedAmount + normalAmount + discountedAmount;
 
         // fund redeemer with the total expected
-        fundRedeemer(totalExpected);
+        _fundRedeemer(totalExpected);
 
         uint256 aliceBefore = alice.balance;
         uint256 bobBefore = bob.balance;
@@ -342,14 +333,14 @@ contract NFTRedeemerTest is Test {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 4000;
         vm.prank(owner);
-        redeemer.setAlternateBatch(tokenIds, true);
+        redeemer.setTokenAlternateBatch(tokenIds, true);
 
         // ensure set
         assertBitSet(4000);
 
         // unset
         vm.prank(owner);
-        redeemer.setAlternateBatch(tokenIds, false);
+        redeemer.setTokenAlternateBatch(tokenIds, false);
 
         // ensure unset
         assertBitUnset(4000);
@@ -360,7 +351,7 @@ contract NFTRedeemerTest is Test {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 5;
         vm.prank(owner);
-        redeemer.setAlternateBatch(tokenIds, true);
+        redeemer.setTokenAlternateBatch(tokenIds, true);
 
         // approve
         vm.prank(alice);
@@ -376,7 +367,7 @@ contract NFTRedeemerTest is Test {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 5;
         vm.prank(owner);
-        redeemer.setAlternateBatch(tokenIds, true);
+        redeemer.setTokenAlternateBatch(tokenIds, true);
 
         // approve
         vm.prank(alice);
@@ -395,7 +386,7 @@ contract NFTRedeemerTest is Test {
         vm.prank(owner);
         redeemer.unpause();
 
-        fundRedeemer(discountedAmount);
+        _fundRedeemer(discountedAmount);
         vm.prank(alice);
         redeemer.redeem(5, alice);
         assertBurned(5);
@@ -406,7 +397,7 @@ contract NFTRedeemerTest is Test {
         // Owner call with empty array throws in our implementation
         vm.prank(owner);
         vm.expectRevert();
-        redeemer.setAlternateBatch(tokenIds, true);
+        redeemer.setTokenAlternateBatch(tokenIds, true);
 
         // nothing changed (check a known token remains unset)
         assertBitUnset(5);
@@ -424,7 +415,7 @@ contract NFTRedeemerTest is Test {
         tokenIds[6] = 79000;
 
         vm.prank(owner);
-        redeemer.setAlternateBatch(tokenIds, true);
+        redeemer.setTokenAlternateBatch(tokenIds, true);
 
         // assert bits are set for each
         for (uint256 i = 0; i < tokenIds.length; i++) {
@@ -451,7 +442,7 @@ contract NFTRedeemerTest is Test {
         mockNft.approve(address(redeemer), 5);
 
         // Fund redeemer
-        fundRedeemer(normalAmount);
+        _fundRedeemer(normalAmount);
 
         // Redeem to bob (not owner)
         uint256 bobBalanceBefore = bob.balance;
@@ -468,14 +459,14 @@ contract NFTRedeemerTest is Test {
         tokenIds[0] = 5;
         tokenIds[1] = 4000;
         vm.prank(owner);
-        redeemer.setAlternateBatch(tokenIds, true);
+        redeemer.setTokenAlternateBatch(tokenIds, true);
 
         // Alice approves redeemer
         vm.prank(alice);
         mockNft.setApprovalForAll(address(redeemer), true);
 
         // Fund redeemer
-        fundRedeemer(discountedAmount * 2);
+        _fundRedeemer(discountedAmount * 2);
 
         // Redeem batch to bob
         uint256 bobBalanceBefore = bob.balance;
@@ -493,14 +484,14 @@ contract NFTRedeemerTest is Test {
     function testRedeemToSelfAndOtherRecipientInBatch() public {
         // Set discount for one token
         vm.prank(owner);
-        redeemer.setAlternate(5, true);
+        redeemer.setTokenAlternate(5, true);
 
         // Alice approves redeemer
         vm.prank(alice);
         mockNft.setApprovalForAll(address(redeemer), true);
 
         // Fund redeemer
-        fundRedeemer(discountedAmount + normalAmount);
+        _fundRedeemer(discountedAmount + normalAmount);
 
         // Redeem batch to alice
         uint256 aliceBalanceBefore = alice.balance;
@@ -519,7 +510,7 @@ contract NFTRedeemerTest is Test {
         // Fund redeemer contract with 3 ether
         uint256 fundAmount = 3 ether;
         uint256 withdrawAmount = 2 ether;
-        fundRedeemer(fundAmount);
+        _fundRedeemer(fundAmount);
 
         // Attempt withdraw as non-owner
         vm.prank(bob);
@@ -589,17 +580,17 @@ contract NFTRedeemerTest is Test {
         // Bob tries to set a discount for token 5
         vm.prank(bob);
         vm.expectRevert(); // Ownable: caller is not the owner
-        redeemer.setAlternate(5, true);
+        redeemer.setTokenAlternate(5, true);
         assertBitUnset(5);
 
         // Alice tries to unset a discount for token 4000
         vm.prank(owner);
-        redeemer.setAlternate(4000, true);
+        redeemer.setTokenAlternate(4000, true);
         assertBitSet(4000);
 
         vm.prank(alice);
         vm.expectRevert(); // Ownable: caller is not the owner
-        redeemer.setAlternate(4000, false);
+        redeemer.setTokenAlternate(4000, false);
         assertBitSet(4000);
     }
 }

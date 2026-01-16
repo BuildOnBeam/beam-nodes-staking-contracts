@@ -68,11 +68,11 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
     address public burner;
 
     /**
-     * @notice Bitmap storing discounted token IDs.
+     * @notice Bitmap storing alternatively priced token IDs.
      * @dev Each uint256 can store discount flags for 256 token IDs.
      *      slot = tokenId >> 8, bit = tokenId & 0xFF
      */
-    mapping(uint256 => uint256) public discountBitmap;
+    mapping(uint256 => uint256) internal _alternatePriceBitmap;
 
     // ------------------------------------------------------------------------
     // Events
@@ -134,7 +134,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
     }
 
     /// @notice Allows the contract to receive ETH.
-    receive() external payable {}
+    receive() external payable virtual {}
 
     // ------------------------------------------------------------------------
     // Redeem logic
@@ -149,11 +149,12 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
     function redeem(
         uint256 tokenId,
         address recipient
-    ) external whenNotPaused nonReentrant {
+    ) external virtual whenNotPaused nonReentrant {
         address sender = msg.sender;
         if (nft.ownerOf(tokenId) != sender) revert NotTokenOwner(tokenId);
 
-        uint256 payout = isAlternate(tokenId) ? alternateRedemptionAmount : baseRedemptionAmount;
+        uint256 payout =
+            isTokenAlternate(tokenId) ? alternateRedemptionAmount : baseRedemptionAmount;
 
         if (address(this).balance < payout) {
             revert InsufficientContractBalance(payout, address(this).balance);
@@ -175,7 +176,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
     function redeemBatch(
         uint256[] calldata tokenIds,
         address recipient
-    ) external whenNotPaused nonReentrant {
+    ) external virtual whenNotPaused nonReentrant {
         uint256 len = tokenIds.length;
         if (len == 0) revert EmptyTokenIds();
 
@@ -189,7 +190,8 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
                 revert NotTokenOwner(tokenId);
             }
 
-            uint256 payout = isAlternate(tokenId) ? alternateRedemptionAmount : baseRedemptionAmount;
+            uint256 payout =
+                isTokenAlternate(tokenId) ? alternateRedemptionAmount : baseRedemptionAmount;
 
             totalPayout += payout;
 
@@ -206,16 +208,27 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
+     * @notice Gets the redemption amount for a specific token ID.
+     * @param tokenId The token ID to check.
+     * @return The redemption amount (in wei).
+     */
+    function getRedemptionAmount(
+        uint256 tokenId
+    ) public view virtual returns (uint256) {
+        return isTokenAlternate(tokenId) ? alternateRedemptionAmount : baseRedemptionAmount;
+    }
+
+    /**
      * @notice Returns whether a token ID is alternatively priced.
      * @dev Reads from the discount bitmap.
      * @param tokenId The token ID to check.
      * @return True if alternate, false otherwise.
      */
-    function isAlternate(
+    function isTokenAlternate(
         uint256 tokenId
-    ) public view returns (bool) {
+    ) public view virtual returns (bool) {
         (uint256 slot, uint256 bit) = _bitmapLocation(tokenId);
-        return (discountBitmap[slot] >> bit) & 1 == 1;
+        return (_alternatePriceBitmap[slot] >> bit) & 1 == 1;
     }
 
     // ------------------------------------------------------------------------
@@ -228,7 +241,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      */
     function setAlternateRedemptionAmount(
         uint256 amount
-    ) external onlyOwner {
+    ) external virtual onlyOwner {
         alternateRedemptionAmount = amount;
         emit RedemptionAmountSet(amount, true);
     }
@@ -239,7 +252,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      */
     function setBaseRedemptionAmount(
         uint256 amount
-    ) external onlyOwner {
+    ) external virtual onlyOwner {
         baseRedemptionAmount = amount;
         emit RedemptionAmountSet(amount, false);
     }
@@ -250,7 +263,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      */
     function setBurner(
         address _burner
-    ) external onlyOwner {
+    ) external virtual onlyOwner {
         burner = _burner;
     }
 
@@ -260,16 +273,16 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      * @param tokenId Token ID to update.
      * @param value True to enable alternate, false to disable.
      */
-    function setAlternate(
+    function setTokenAlternate(
         uint256 tokenId,
         bool value
-    ) external onlyOwner {
+    ) external virtual onlyOwner {
         (uint256 slot, uint256 bit) = _bitmapLocation(tokenId);
 
         if (value) {
-            discountBitmap[slot] |= (1 << bit);
+            _alternatePriceBitmap[slot] |= (1 << bit);
         } else {
-            discountBitmap[slot] &= ~(1 << bit);
+            _alternatePriceBitmap[slot] &= ~(1 << bit);
         }
     }
 
@@ -281,10 +294,10 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      * @param tokenIds Array of token IDs to update.
      * @param value True = enable alternate, False = disable alternate.
      */
-    function setAlternateBatch(
+    function setTokenAlternateBatch(
         uint256[] calldata tokenIds,
         bool value
-    ) external onlyOwner {
+    ) external virtual onlyOwner {
         uint256 len = tokenIds.length;
         if (len == 0) revert EmptyTokenIds();
 
@@ -326,12 +339,12 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
         if (value) {
             // Set bits
             for (uint256 i = 0; i < slotCount; i++) {
-                discountBitmap[slots[i]] |= masks[i];
+                _alternatePriceBitmap[slots[i]] |= masks[i];
             }
         } else {
             // Clear bits
             for (uint256 i = 0; i < slotCount; i++) {
-                discountBitmap[slots[i]] &= ~masks[i];
+                _alternatePriceBitmap[slots[i]] &= ~masks[i];
             }
         }
     }
@@ -342,7 +355,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      */
     function withdraw(
         uint256 amount
-    ) external onlyOwner {
+    ) external virtual onlyOwner {
         if (address(this).balance < amount) {
             revert InsufficientContractBalance(amount, address(this).balance);
         }
@@ -356,7 +369,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      * @notice Pauses the redeeming functionality.
      * @dev Owner only.
      */
-    function pause() external onlyOwner {
+    function pause() external virtual onlyOwner {
         _pause();
     }
 
@@ -364,7 +377,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      * @notice Unpauses the redeeming functionality.
      * @dev Owner only.
      */
-    function unpause() external onlyOwner {
+    function unpause() external virtual onlyOwner {
         _unpause();
     }
 
@@ -380,7 +393,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
      */
     function _bitmapLocation(
         uint256 tokenId
-    ) internal pure returns (uint256 slot, uint256 bit) {
+    ) internal pure virtual returns (uint256 slot, uint256 bit) {
         slot = tokenId >> 8; // tokenId / 256
         bit = tokenId & 0xFF; // tokenId % 256
     }
