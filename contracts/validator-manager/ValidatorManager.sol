@@ -19,11 +19,29 @@ import {
     IWarpMessenger,
     WarpMessage
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
-import {OwnableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
-import {Initializable} from
-    "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
 import {ICMInitializable} from "@utilities/ICMInitializable.sol";
+
+import {
+    VotesUpgradeable,
+    Checkpoints
+} from "@openzeppelin/contracts-upgradeable@5.0.2/governance/utils/VotesUpgradeable.sol";
+
+interface IStakingManagerOwner {
+    /**
+     * @notice Returns the owner of the validator with the given validationID
+     * @param validationID The ID of the validation period
+     * @return The address of the owner of the validator, or 0x0 if the validator does not exist
+     */
+    function getOwnerOfValidator(
+        bytes32 validationID
+    ) external view returns (address);
+}
 
 /**
  * @dev Describes the current churn period
@@ -53,7 +71,7 @@ struct ValidatorManagerSettings {
  *
  * @custom:security-contact https://github.com/ava-labs/icm-contracts/blob/main/SECURITY.md
  */
-contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
+contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager, VotesUpgradeable {
     // solhint-disable private-vars-leading-underscore
     /// @custom:storage-location erc7201:avalanche-icm.storage.ValidatorManager
     struct ValidatorManagerStorage {
@@ -73,6 +91,9 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
         mapping(bytes => bytes32) _registeredValidators;
         /// @notice Boolean that indicates if the initial validator set has been set.
         bool _initializedValidatorSet;
+
+        mapping(address => uint64) _validatorOwnerWeights;
+        address _admin;
     }
     // solhint-enable private-vars-leading-underscore
 
@@ -102,6 +123,7 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
     error InvalidValidatorStatus(ValidatorStatus status);
     error InvalidNonce(uint64 nonce);
     error InvalidWarpMessage();
+    error InputLengthMismatch();
     error MaxChurnRateExceeded(uint64 churnAmount);
     error NodeAlreadyRegistered(bytes nodeID);
     error UnexpectedRegistrationStatus(bool validRegistration);
@@ -170,6 +192,7 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
 
         $._maximumChurnPercentage = settings.maximumChurnPercentage;
         $._churnPeriodSeconds = settings.churnPeriodSeconds;
+        $._admin = settings.admin;
     }
 
     modifier initializedValidatorSet() {
@@ -333,8 +356,7 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
         // Check that adding this validator would not exceed the maximum churn rate.
         _checkAndUpdateChurnTracker(weight, 0);
 
-        (bytes32 validationID, bytes memory registerL1ValidatorMessage) = ValidatorMessages
-            .packRegisterL1ValidatorMessage(
+        (bytes32 validationID, bytes memory registerL1ValidatorMessage) = ValidatorMessages.packRegisterL1ValidatorMessage(
             ValidatorMessages.ValidationPeriod({
                 subnetID: $._subnetID,
                 nodeID: nodeID,
@@ -393,8 +415,9 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
         uint32 messageIndex
     ) public virtual override onlyOwner returns (bytes32) {
         ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
-        (bytes32 validationID, bool validRegistration) = ValidatorMessages
-            .unpackL1ValidatorRegistrationMessage(_getPChainWarpMessage(messageIndex).payload);
+        (bytes32 validationID, bool validRegistration) = ValidatorMessages.unpackL1ValidatorRegistrationMessage(
+            _getPChainWarpMessage(messageIndex).payload
+        );
 
         if (!validRegistration) {
             revert UnexpectedRegistrationStatus(validRegistration);
@@ -410,7 +433,16 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
         delete $._pendingRegisterValidationMessages[validationID];
         $._validationPeriods[validationID].status = ValidatorStatus.Active;
         $._validationPeriods[validationID].startTime = uint64(block.timestamp);
-        emit CompletedValidatorRegistration(validationID, $._validationPeriods[validationID].weight);
+        uint64 weight = $._validationPeriods[validationID].weight;
+        emit CompletedValidatorRegistration(validationID, weight);
+
+        // Track voting power for the validator owner
+        // Called after registration is complete to ensure owner is set
+        address validatorOwner = _getOwnerOfValidator(validationID);
+        if (validatorOwner != address(0)) {
+            $._validatorOwnerWeights[validatorOwner] += weight;
+            _transferVotingUnits(address(0), validatorOwner, weight);
+        }
 
         return validationID;
     }
@@ -546,8 +578,9 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
         ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
 
         // Get the Warp message.
-        (bytes32 validationID, bool validRegistration) = ValidatorMessages
-            .unpackL1ValidatorRegistrationMessage(_getPChainWarpMessage(messageIndex).payload);
+        (bytes32 validationID, bool validRegistration) = ValidatorMessages.unpackL1ValidatorRegistrationMessage(
+            _getPChainWarpMessage(messageIndex).payload
+        );
         if (validRegistration) {
             revert UnexpectedRegistrationStatus(validRegistration);
         }
@@ -644,6 +677,22 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
             weight: newWeight
         });
 
+        // Update voting power for the validator owner
+        address validatorOwner = _getOwnerOfValidator(validationID);
+        if (validatorOwner != address(0)) {
+            if (validatorWeight > newWeight) {
+                // Decrease voting power for the validator owner
+                uint64 weightDecrease = validatorWeight - newWeight;
+                $._validatorOwnerWeights[validatorOwner] -= weightDecrease;
+                _transferVotingUnits(validatorOwner, address(0), weightDecrease);
+            } else if (validatorWeight < newWeight) {
+                // Increase voting power for the validator owner
+                uint64 weightIncrease = newWeight - validatorWeight;
+                $._validatorOwnerWeights[validatorOwner] += weightIncrease;
+                _transferVotingUnits(address(0), validatorOwner, weightIncrease);
+            }
+        }
+
         return (nonce, messageID);
     }
 
@@ -717,5 +766,104 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager {
             fixedID := mload(add(nodeID, 32))
         }
         return fixedID;
+    }
+
+    function clock() public view override returns (uint48) {
+        return uint48(block.timestamp);
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function CLOCK_MODE() public pure override returns (string memory) {
+        return "mode=timestamp";
+    }
+
+    /**
+     * @dev Get number of checkpoints for `account`.
+     */
+    function numCheckpoints(
+        address account
+    ) public view virtual returns (uint32) {
+        return _numCheckpoints(account);
+    }
+
+    /**
+     * @dev Get the `pos`-th checkpoint for `account`.
+     */
+    function checkpoints(
+        address account,
+        uint32 pos
+    ) public view virtual returns (Checkpoints.Checkpoint208 memory) {
+        return _checkpoints(account, pos);
+    }
+
+    function _getOwnerOfValidator(
+        bytes32 validationId
+    ) internal virtual returns (address validatorOwner) {
+        return IStakingManagerOwner(owner()).getOwnerOfValidator(validationId);
+    }
+
+    /**
+     * @dev Returns the voting units of an `account`.
+     */
+    function _getVotingUnits(
+        address account
+    ) internal view virtual override returns (uint256) {
+        return _getValidatorManagerStorage()._validatorOwnerWeights[account];
+    }
+
+    function backfillValidatorOwnerWeights(
+        address[] calldata owners,
+        uint64[] calldata weights
+    ) external virtual adminOnly {
+        if (owners.length != weights.length) {
+            revert InputLengthMismatch();
+        }
+
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        for (uint256 i = 0; i < owners.length; i++) {
+            address owner = owners[i];
+            uint64 weight = weights[i];
+
+            $._validatorOwnerWeights[owner] += weight;
+            _transferVotingUnits(address(0), owner, weight);
+        }
+    }
+
+    function migrate(
+        address admin
+    ) external virtual reinitializer(4) {
+        _setAdmin(admin);
+    }
+
+    function _setAdmin(
+        address newAdmin
+    ) internal virtual {
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        $._admin = newAdmin;
+    }
+
+    function setAdmin(
+        address newAdmin
+    ) external virtual adminOnly {
+        _setAdmin(newAdmin);
+    }
+
+    function forceTransferOwnership(
+        address ownedContract,
+        address newOwner
+    ) external virtual adminOnly {
+        OwnableUpgradeable ownable = OwnableUpgradeable(ownedContract);
+        ownable.transferOwnership(newOwner);
+    }
+
+    function _checkAdminOnly() internal view virtual {
+        if (_msgSender() != _getValidatorManagerStorage()._admin) {
+            revert UnauthorizedCaller(_msgSender());
+        }
+    }
+
+    modifier adminOnly() {
+        _checkAdminOnly();
+        _;
     }
 }

@@ -847,6 +847,17 @@ abstract contract StakingManager is
     }
 
     /**
+     * @notice Returns the owner of the validator with the given validationID
+     * @param validationID The ID of the validation period
+     * @return The address of the owner of the validator, or 0x0 if the validator does not exist
+     */
+    function getOwnerOfValidator(
+        bytes32 validationID
+    ) external view returns (address) {
+        return _getStakingManagerStorage()._posValidatorInfo[validationID].owner;
+    }
+
+    /**
      * @dev This function must be implemented to mint rewards to validators and delegators.
      */
     function _reward(
