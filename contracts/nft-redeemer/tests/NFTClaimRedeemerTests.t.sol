@@ -4,14 +4,14 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import {NFTClaimRedeemer, NFTRedeemer} from "../NFTClaimRedeemer.sol";
-import {MockERC721Burnable} from "./NFTRedeemerTests.t.sol";
+import {MockERC721} from "./NFTRedeemerTests.t.sol";
 
 /**
  * @title NFTClaimRedeemerTest
  * @dev Foundry test contract for NFTClaimRedeemer.
  */
 contract NFTClaimRedeemerTest is Test {
-    MockERC721Burnable mockNft;
+    MockERC721 mockNft;
     NFTClaimRedeemer claimRedeemer;
 
     address owner = address(0xABCD);
@@ -24,7 +24,7 @@ contract NFTClaimRedeemerTest is Test {
 
     function setUp() public {
         // Deploy mock NFT and redeemer
-        mockNft = new MockERC721Burnable();
+        mockNft = new MockERC721();
 
         // deploy redeemer as owner (we'll impersonate owner for owner-only calls)
         vm.prank(owner);
@@ -49,7 +49,7 @@ contract NFTClaimRedeemerTest is Test {
         uint256 claimAmount = 2 ether;
         vm.prank(owner);
         claimRedeemer.setClaim(alice, claimAmount);
-        assertEq(claimRedeemer.claims(alice), claimAmount);
+        assertEq(claimRedeemer.getUnclaimedAmount(alice), claimAmount);
     }
 
     function testNonOwnerCannotSetClaim() public {
@@ -69,8 +69,8 @@ contract NFTClaimRedeemerTest is Test {
 
         vm.prank(owner);
         claimRedeemer.setClaimBatch(accounts, values);
-        assertEq(claimRedeemer.claims(alice), 1 ether);
-        assertEq(claimRedeemer.claims(bob), 2 ether);
+        assertEq(claimRedeemer.getUnclaimedAmount(alice), 1 ether);
+        assertEq(claimRedeemer.getUnclaimedAmount(bob), 2 ether);
     }
 
     function testSetClaimBatchRevertsOnInputMismatch() public {
@@ -101,7 +101,7 @@ contract NFTClaimRedeemerTest is Test {
         // Alice redeems her claim
         vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
-        emit NFTClaimRedeemer.RedeemedUnclaimed(alice, claimAmount);
+        emit NFTClaimRedeemer.RedeemedUnclaimed(alice, alice, claimAmount);
         claimRedeemer.redeemUnclaimed(alice);
         vm.stopPrank();
 
@@ -131,7 +131,7 @@ contract NFTClaimRedeemerTest is Test {
         // Alice redeems her claim, sending the funds to Bob
         vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
-        emit NFTClaimRedeemer.RedeemedUnclaimed(alice, claimAmount);
+        emit NFTClaimRedeemer.RedeemedUnclaimed(alice, bob, claimAmount);
         claimRedeemer.redeemUnclaimed(bob);
         vm.stopPrank();
 

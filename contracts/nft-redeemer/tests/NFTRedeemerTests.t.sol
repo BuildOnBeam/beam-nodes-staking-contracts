@@ -6,12 +6,10 @@ import {Test} from "forge-std/Test.sol";
 import {NFTRedeemer} from "../NFTRedeemer.sol";
 
 /**
- * @title MockERC721Burnable
- * @dev Minimal ERC721-like mock that supports mint, approve, ownerOf, burn, transferFrom.
- *      burn() requires msg.sender == owner || approvedForAll || getApproved == msg.sender
- *      This mock simplifies behavior but is sufficient for tests.
+ * @title MockERC721
+ * @dev Minimal ERC721-like mock that supports mint, approve, ownerOf, transferFrom.
  */
-contract MockERC721Burnable {
+contract MockERC721 {
     string public name = "Mock";
     string public symbol = "MCK";
 
@@ -93,27 +91,6 @@ contract MockERC721Burnable {
         _ownerOf[tokenId] = to;
         emit Transfer(from, to, tokenId);
     }
-
-    /**
-     * @notice Burn tokenId. Allowed only for owner or approved.
-     */
-    function burn(
-        uint256 tokenId
-    ) external {
-        address owner = ownerOf(tokenId);
-        require(
-            msg.sender == owner || getApproved(tokenId) == msg.sender
-                || isApprovedForAll(owner, msg.sender),
-            "not authorized to burn"
-        );
-
-        // remove ownership
-        delete _ownerOf[tokenId];
-        burned[tokenId] = true;
-
-        emit Burned(msg.sender, tokenId);
-        emit Transfer(owner, address(0), tokenId);
-    }
 }
 
 /**
@@ -121,7 +98,7 @@ contract MockERC721Burnable {
  * @dev Foundry test contract for NFTNativeRedeemer.
  */
 contract NFTRedeemerTest is Test {
-    MockERC721Burnable mockNft;
+    MockERC721 mockNft;
     NFTRedeemer redeemer;
 
     address owner = address(0xABCD);
@@ -134,7 +111,7 @@ contract NFTRedeemerTest is Test {
 
     function setUp() public {
         // Deploy mock NFT and redeemer
-        mockNft = new MockERC721Burnable();
+        mockNft = new MockERC721();
 
         // deploy redeemer as owner (we'll impersonate owner for owner-only calls)
         vm.prank(owner);

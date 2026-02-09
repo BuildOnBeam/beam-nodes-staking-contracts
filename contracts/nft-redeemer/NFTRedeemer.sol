@@ -6,14 +6,15 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /**
  * @title NFTRedeemer
  * @notice Allows users to redeem ERC721 tokens for native ETH. Redeemed NFTs are sent to a specified
  *         burn address, to support tokens without burnable functionality.
- *         Certain token IDs can receive a discounted redemption amount using an on-chain bitmap.
+ *         Certain token IDs can receive an alternate redemption amount using an on-chain bitmap.
  */
-contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
+contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard, ERC165 {
     using Address for address payable;
 
     // ------------------------------------------------------------------------
@@ -53,7 +54,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
     IERC721 public immutable nft;
 
     /**
-     * @notice Standard redemption amount (in wei) for non-discounted NFTs.
+     * @notice Standard redemption amount (in wei) for all NFTs.
      */
     uint256 public baseRedemptionAmount;
 
@@ -69,7 +70,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @notice Bitmap storing alternatively priced token IDs.
-     * @dev Each uint256 can store discount flags for 256 token IDs.
+     * @dev Each uint256 can store alternate pricing flags for 256 token IDs.
      *      slot = tokenId >> 8, bit = tokenId & 0xFF
      */
     mapping(uint256 => uint256) internal _alternatePriceBitmap;
@@ -88,10 +89,10 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @notice Emitted when the redemption amount changes.
-     * @param newAmount The updated discounted amount.
-     * @param discounted True if the updated amount is the discounted amount.
+     * @param newAmount The updated amount.
+     * @param alternate True if the updated amount is the alternate amount.
      */
-    event RedemptionAmountSet(uint256 newAmount, bool discounted);
+    event RedemptionAmountSet(uint256 newAmount, bool indexed alternate);
 
     /**
      * @notice Emitted when the contract owner withdraws ETH.
@@ -220,7 +221,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @notice Returns whether a token ID is alternatively priced.
-     * @dev Reads from the discount bitmap.
+     * @dev Reads from the alternate-pricing bitmap.
      * @param tokenId The token ID to check.
      * @return True if alternate, false otherwise.
      */
@@ -264,6 +265,9 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard {
     function setBurner(
         address _burner
     ) external virtual onlyOwner {
+        if (_burner == address(0)) {
+            revert ZeroAddress();
+        }
         burner = _burner;
     }
 
