@@ -6,6 +6,8 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /**
@@ -15,6 +17,7 @@ import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  *         Certain token IDs can receive an alternate redemption amount using an on-chain bitmap.
  */
 contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard, ERC165 {
+    using SafeERC20 for IERC20;
     using Address for address payable;
 
     // ------------------------------------------------------------------------
@@ -100,6 +103,22 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard, ERC165 {
      * @param amount Amount transferred.
      */
     event Withdrawn(address indexed owner, uint256 amount);
+
+    /**
+     * @notice Emitted when ERC20 tokens are recovered.
+     * @param token The ERC20 token address.
+     * @param amount Amount of tokens recovered.
+     * @param recipient Address receiving the recovered tokens.
+     */
+    event RecoveredERC20(address indexed token, uint256 amount, address indexed recipient);
+
+    /**
+     * @notice Emitted when ERC721 tokens are recovered.
+     * @param token The ERC721 token address.
+     * @param tokenId The token ID recovered.
+     * @param recipient Address receiving the recovered token.
+     */
+    event RecoveredERC721(address indexed token, uint256 tokenId, address indexed recipient);
 
     // ------------------------------------------------------------------------
     // Constructor & Co.
@@ -367,6 +386,40 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard, ERC165 {
         payable(msg.sender).sendValue(amount);
 
         emit Withdrawn(msg.sender, amount);
+    }
+
+    /**
+     * @notice Recovers ERC20 tokens sent to the contract by mistake.
+     * @param token Address of the ERC20 token.
+     * @param amount Amount of tokens to recover.
+     * @param recipient Address to receive the recovered tokens.
+     */
+    function recoverERC20(
+        address token,
+        uint256 amount,
+        address recipient
+    ) external virtual onlyOwner {
+        IERC20(token).safeTransfer(recipient, amount);
+        emit RecoveredERC20(token, amount, recipient);
+    }
+
+    /**
+     * @notice Recovers ERC721 tokens sent to the contract by mistake.
+     * @param token Address of the ERC721 token.
+     * @param tokenIds Array of token IDs to recover.
+     */
+    function recoverERC721(
+        address token,
+        uint256[] memory tokenIds,
+        address recipient
+    ) external virtual onlyOwner {
+        IERC721 erc721 = IERC721(token);
+        address from = address(this);
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            erc721.transferFrom(from, recipient, tokenIds[i]);
+            emit RecoveredERC721(token, tokenIds[i], recipient);
+        }
     }
 
     /**
