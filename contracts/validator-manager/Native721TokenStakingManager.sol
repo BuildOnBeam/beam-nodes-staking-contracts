@@ -69,6 +69,9 @@ contract Native721TokenStakingManager is
     error TooLate(uint256 actualTime, uint256 expectedTime);
     error InvalidZeroAmount();
     error InvalidZeroAddress();
+    error MethodDeprecated();
+
+    event ValidatorNFTsUnlocked(bytes32 indexed validationID);
 
     // solhint-disable ordering
     function _getERC721StakingManagerStorage()
@@ -124,6 +127,7 @@ contract Native721TokenStakingManager is
 
     /**
      * @notice See {INative721TokenStakingManager-initiateValidatorRegistration}.
+     * @notice Ignores passed in `tokenIDs`.
      */
     function initiateValidatorRegistration(
         bytes memory nodeID,
@@ -143,8 +147,7 @@ contract Native721TokenStakingManager is
             disableOwner: disableOwner,
             delegationFeeBips: delegationFeeBips,
             minStakeDuration: minStakeDuration,
-            stakeAmount: msg.value,
-            tokenIDs: tokenIDs
+            stakeAmount: msg.value
         });
     }
 
@@ -159,29 +162,34 @@ contract Native721TokenStakingManager is
 
     /**
      * @notice See {INative721TokenStakingManager-registerNFTDelegation}.
+     * @notice Deprecated: NFT Delegation is no longer supported and throws.
      *
      */
     function registerNFTDelegation(
-        bytes32 validationID,
-        uint256[] memory tokenIDs
+        bytes32,
+        /*validationID*/
+        uint256[] memory /*tokenIDs*/
     ) external nonReentrant returns (bytes32) {
-        _lockNFTs(tokenIDs);
-        return _registerNFTDelegation(validationID, _msgSender(), tokenIDs);
+        revert MethodDeprecated();
     }
 
     /**
      * @notice See {INative721TokenStakingManager-initializeEndNFTDelegation}.
-     *
+     * @notice Unlocks delegated tokens instantly.
      */
     function initiateNFTDelegatorRemoval(
         bytes32 delegationID
     ) external nonReentrant {
+        StakingManagerStorage storage $ = _getStakingManagerStorage();
+        Delegator memory delegator = $._delegatorStakes[delegationID];
+
         _initiateNFTDelegatorRemoval(delegationID);
+        _unlockNFTs(delegator.owner, _completeNFTDelegatorRemoval(delegationID));
     }
 
     /**
      * @notice See {INative721TokenStakingManager-completeEndNFTDelegation}.
-     *
+     * @notice Kept on for backwards-compatibility, but unlocks pending removals directly.
      */
     function completeNFTDelegatorRemoval(
         bytes32 delegationID
@@ -196,30 +204,23 @@ contract Native721TokenStakingManager is
             revert InvalidDelegatorStatus(delegator.status);
         }
 
-        if (block.timestamp < delegator.endTime + $._unlockDuration) {
-            revert UnlockDurationNotPassed(uint64(block.timestamp));
-        }
-
         _unlockNFTs(delegator.owner, _completeNFTDelegatorRemoval(delegationID));
     }
 
     /**
      * @notice See {INative721TokenStakingManager-registerNFTRedelegation}.
+     * @notice Deprecated: NFT Redelegation is no longer supported and throws.
      */
     function registerNFTRedelegation(
-        bytes32 delegationID,
-        bytes32 nextValidationID
+        bytes32,
+        /*delegationID*/
+        bytes32 /*nextValidationID*/
     ) external nonReentrant {
-        StakingManagerStorage storage $ = _getStakingManagerStorage();
-        Delegator memory delegator = $._delegatorStakes[delegationID];
-
-        _initiateNFTDelegatorRemoval(delegationID);
-        uint256[] memory tokenIDs = _completeNFTDelegatorRemoval(delegationID);
-        _registerNFTDelegation(nextValidationID, delegator.owner, tokenIDs);
+        revert MethodDeprecated();
     }
 
     /**
-     * @notice unlocks the validator stake, to be called after removal and passing of unlock duration
+     * @notice Unlocks the validator stake, to be called after removal and passing of unlock duration
      * @param validationID The unique identifier of the validator to unlock.
      */
     function unlockValidator(
@@ -231,6 +232,29 @@ contract Native721TokenStakingManager is
         _unlockNFTs(
             $._posValidatorInfo[validationID].owner, $._posValidatorInfo[validationID].tokenIDs
         );
+    }
+
+    /**
+     * @notice Unlocks the validator NFTs, without unlocking the stake or validator itself.
+     * @param validationID The unique identifier of the validator.
+     *
+     * Reverts if the caller is not the owner of the validator.
+     */
+    function unlockValidatorNFTs(
+        bytes32 validationID
+    ) external nonReentrant {
+        StakingManagerStorage storage $ = _getStakingManagerStorage();
+        address owner = $._posValidatorInfo[validationID].owner;
+
+        if (owner != _msgSender()) {
+            revert UnauthorizedOwner(_msgSender());
+        }
+
+        _unlockNFTs(owner, $._posValidatorInfo[validationID].tokenIDs);
+
+        delete $._posValidatorInfo[validationID].tokenIDs;
+
+        emit ValidatorNFTsUnlocked(validationID);
     }
 
     /**
@@ -441,23 +465,6 @@ contract Native721TokenStakingManager is
     }
 
     /**
-     * @notice Locks a list of ERC-721 tokens by transferring them to the contract.
-     * @dev Transfers each token in `tokenIDs` from the caller to the contract.
-     * This function is used to stake NFTs as part of the staking mechanism.
-     * @param tokenIDs The array of token IDs to be locked.
-     * @return The number of tokens successfully locked.
-     */
-    function _lockNFTs(
-        uint256[] memory tokenIDs
-    ) internal returns (uint256) {
-        for (uint256 i = 0; i < tokenIDs.length; i++) {
-            _getERC721StakingManagerStorage()._token
-                .safeTransferFrom(_msgSender(), address(this), tokenIDs[i]);
-        }
-        return tokenIDs.length;
-    }
-
-    /**
      * @notice Unlocks a list of ERC-721 tokens by transferring them back to the specified address.
      * @dev Transfers each token in `tokenIDs` from the contract to the recipient.
      * This function is used when unstaking NFTs from the staking mechanism.
@@ -468,8 +475,10 @@ contract Native721TokenStakingManager is
         address to,
         uint256[] memory tokenIDs
     ) internal virtual {
+        IERC721 token = _getERC721StakingManagerStorage()._token;
+
         for (uint256 i = 0; i < tokenIDs.length; i++) {
-            _getERC721StakingManagerStorage()._token.transferFrom(address(this), to, tokenIDs[i]);
+            token.transferFrom(address(this), to, tokenIDs[i]);
         }
     }
 
@@ -506,9 +515,8 @@ contract Native721TokenStakingManager is
         PChainOwner memory disableOwner,
         uint16 delegationFeeBips,
         uint64 minStakeDuration,
-        uint256 stakeAmount,
-        uint256[] memory tokenIDs
-    ) internal virtual returns (bytes32) {
+        uint256 stakeAmount
+    ) internal virtual override returns (bytes32) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         // Validate and save the validator requirements
         if (
@@ -527,13 +535,7 @@ contract Native721TokenStakingManager is
             revert InvalidStakeAmount(stakeAmount);
         }
 
-        if (tokenIDs.length < 1 || tokenIDs.length > $._maximumNFTAmount) {
-            revert InvalidNFTAmount(tokenIDs.length);
-        }
-
         // Lock the stake in the contract.
-        _lockNFTs(tokenIDs);
-
         bytes32 validationID = $._manager
             .initiateValidatorRegistration({
                 nodeID: nodeID,
@@ -548,92 +550,15 @@ contract Native721TokenStakingManager is
         $._posValidatorInfo[validationID].delegationFeeBips = delegationFeeBips;
         $._posValidatorInfo[validationID].minStakeDuration = minStakeDuration;
         $._posValidatorInfo[validationID].uptimeSeconds = 0;
-        $._posValidatorInfo[validationID].tokenIDs = tokenIDs;
-        $._posValidatorInfo[validationID].totalTokens = tokenIDs.length;
 
         return validationID;
-    }
-
-    /**
-     * @notice Registers an NFT-based delegation to a PoS validator.
-     * @dev This function records the delegation details, ensures the validator is active,
-     *      updates the staking records, and emits relevant events.
-     * @param validationID The identifier of the PoS validator to delegate to.
-     * @param delegatorAddress The address of the user delegating NFTs.
-     * @param tokenIDs The array of NFT token IDs being delegated.
-     * @return delegationID A unique identifier for this delegation.
-     *
-     * Requirements:
-     * - The validator must be a valid PoS validator.
-     * - The validator must be in an active status.
-     * - The function generates a unique delegation ID based on the validation ID and nonce.
-     *
-     * Emits:
-     * - `InitiatedDelegatorRegistration` upon starting the delegation process.
-     * - `CompletedDelegatorRegistration` once the delegation is successfully recorded.
-     * - `DelegatedNFTs` containing the delegated NFT token IDs.
-     */
-    function _registerNFTDelegation(
-        bytes32 validationID,
-        address delegatorAddress,
-        uint256[] memory tokenIDs
-    ) internal returns (bytes32) {
-        StakingManagerStorage storage $ = _getStakingManagerStorage();
-        uint64 weight = uint64(tokenIDs.length * 1e6);
-
-        // Ensure the validation period is active
-        Validator memory validator = $._manager.getValidator(validationID);
-        // Check that the validation ID is a PoS validator
-        _checkPoSValidator(validationID);
-        if (validator.status != ValidatorStatus.Active) {
-            revert InvalidValidatorStatus(validator.status);
-        }
-
-        if ($._posValidatorInfo[validationID].totalTokens + tokenIDs.length > $._maximumNFTAmount) {
-            revert InvalidNFTAmount(uint64(
-                    $._posValidatorInfo[validationID].totalTokens + tokenIDs.length
-                ));
-        }
-
-        uint64 nonce = ++$._posValidatorInfo[validationID].tokenNonce;
-
-        // Update the delegation status
-        bytes32 delegationID = keccak256(abi.encodePacked(validationID, nonce, "ERC721"));
-        $._delegatorStakes[delegationID].owner = delegatorAddress;
-        $._delegatorStakes[delegationID].validationID = validationID;
-        $._delegatorStakes[delegationID].weight = weight;
-        $._delegatorStakes[delegationID].status = DelegatorStatus.Active;
-        $._delegatorStakes[delegationID].startTime = uint64(block.timestamp);
-        $._lockedNFTs[delegationID] = tokenIDs;
-
-        $._posValidatorInfo[validationID].totalTokens += tokenIDs.length;
-
-        emit InitiatedDelegatorRegistration({
-            delegationID: delegationID,
-            validationID: validationID,
-            delegatorAddress: delegatorAddress,
-            nonce: nonce,
-            validatorWeight: validator.weight,
-            delegatorWeight: weight,
-            setWeightMessageID: 0
-        });
-
-        emit CompletedDelegatorRegistration({
-            delegationID: delegationID,
-            validationID: validationID,
-            startTime: uint64(block.timestamp)
-        });
-
-        emit DelegatedNFTs(delegationID, tokenIDs);
-
-        return delegationID;
     }
 
     /**
      * @notice Initiates the process of ending an NFT delegation for a given delegation ID.
      * @dev This function ensures that the delegation is active and validates that the caller is authorized to end it.
      *      If the validator status is valid, the delegation status is updated to `PendingRemoved`. If the validator
-     *      is complete, then removal is completed directly. Status is updated to `Completed` and initate
+     *      is complete, then removal is completed directly. Status is updated to `Completed` and initiate
      *      `InitiatedDelegatorRemoval` is not emitted.
      * @param delegationID The unique identifier of the NFT delegation to be ended.
      *
