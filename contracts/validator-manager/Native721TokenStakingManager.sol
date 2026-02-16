@@ -334,7 +334,7 @@ contract Native721TokenStakingManager is
         // restrict to only be called by specific contract or owner
         address sender = _msgSender();
         if (sender != $$._protocolRewardsRegistrar && sender != owner()) {
-            revert UnauthorizedOwner(sender);
+            revert OwnableUnauthorizedAccount(sender);
         }
 
         // input checks
@@ -656,14 +656,14 @@ contract Native721TokenStakingManager is
         // Ensure the delegation is NFTs
         _checkNFTDelegator(delegationID);
 
-        // Check ownership
-        if (delegator.owner != _msgSender()) {
-            revert UnauthorizedOwner(_msgSender());
-        }
-
         // Ensure the delegator is active
         if (delegator.status != DelegatorStatus.Active) {
             revert InvalidDelegatorStatus(delegator.status);
+        }
+
+        // Check ownership
+        if (delegator.owner != _msgSender()) {
+            revert UnauthorizedOwner(_msgSender());
         }
 
         if (

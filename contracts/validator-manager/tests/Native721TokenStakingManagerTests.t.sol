@@ -100,7 +100,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
 
         StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
         defaultPoSSettings.manager = validatorManager;
-        app.initialize(defaultPoSSettings, stakingToken, registrar);
+        app.initialize(defaultPoSSettings, IERC721(address(0)), registrar);
     }
 
     function testZeroMinimumDelegationFee() public {

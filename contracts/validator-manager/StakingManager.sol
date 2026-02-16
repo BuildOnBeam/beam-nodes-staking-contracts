@@ -652,14 +652,14 @@ abstract contract StakingManager is
         // Ensure the delegation is native
         _checkNativeDelegator(delegationID);
 
-        // Check ownership
-        if (delegator.owner != _msgSender()) {
-            revert UnauthorizedOwner(_msgSender());
-        }
-
         // Ensure the delegator is active
         if (delegator.status != DelegatorStatus.Active) {
             revert InvalidDelegatorStatus(delegator.status);
+        }
+
+        // Check ownership
+        if (delegator.owner != _msgSender()) {
+            revert UnauthorizedOwner(_msgSender());
         }
 
         if (validator.status == ValidatorStatus.Active) {

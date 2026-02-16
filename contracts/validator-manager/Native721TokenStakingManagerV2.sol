@@ -39,7 +39,7 @@ import {
  *
  * @custom:security-contact https://github.com/ava-labs/icm-contracts/blob/main/SECURITY.md
  */
-contract Native721TokenStakingManager is
+contract Native721TokenStakingManagerV2 is
     Initializable,
     StakingManager,
     OwnableUpgradeable,
@@ -127,7 +127,7 @@ contract Native721TokenStakingManager is
 
     /**
      * @notice See {INative721TokenStakingManager-initiateValidatorRegistration}.
-     * @notice Ignores passed in `tokenIDs`.
+     * @notice V2: Ignores passed in `tokenIDs`.
      */
     function initiateValidatorRegistration(
         bytes memory nodeID,
@@ -358,7 +358,7 @@ contract Native721TokenStakingManager is
         // restrict to only be called by specific contract or owner
         address sender = _msgSender();
         if (sender != $$._protocolRewardsRegistrar && sender != owner()) {
-            revert UnauthorizedOwner(sender);
+            revert OwnableUnauthorizedAccount(sender);
         }
 
         // input checks
@@ -565,7 +565,6 @@ contract Native721TokenStakingManager is
      * Reverts if:
      * - The delegation is not active (`InvalidDelegatorStatus`).
      * - The caller is not authorized to end the delegation (`UnauthorizedOwner`).
-     * - The minimum stake duration has not passed for the validator or the delegator (`MinStakeDurationNotPassed`).
      * - The validator is not in a valid state to end the delegation (`InvalidValidatorStatus`).
      */
     function _initiateNFTDelegatorRemoval(
@@ -595,13 +594,7 @@ contract Native721TokenStakingManager is
             validator.status == ValidatorStatus.Active
                 || validator.status == ValidatorStatus.Completed
         ) {
-            // Check that minimum stake duration has passed.
-            if (
-                validator.status != ValidatorStatus.Completed
-                    && block.timestamp < delegator.startTime + $._minimumStakeDuration
-            ) {
-                revert MinStakeDurationNotPassed(uint64(block.timestamp));
-            }
+            // V2: Removed check that minimum NFT stake duration has passed for active validators.
 
             $._delegatorStakes[delegationID].status = DelegatorStatus.PendingRemoved;
             $._delegatorStakes[delegationID].endTime = uint64(block.timestamp);
