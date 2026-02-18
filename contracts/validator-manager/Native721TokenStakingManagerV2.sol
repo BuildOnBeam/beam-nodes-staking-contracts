@@ -71,11 +71,11 @@ contract Native721TokenStakingManagerV2 is
     error InvalidZeroAddress();
     error MethodDeprecated();
 
-    event ValidatorNFTsUnlocked(bytes32 indexed validationID);
+    event ValidatorNFTsUnlocked(bytes32 indexed validationID, uint256 totalTokens);
 
     // solhint-disable ordering
     function _getERC721StakingManagerStorage()
-        private
+        internal
         pure
         returns (Native721TokenStakingManagerStorage storage $)
     {
@@ -137,7 +137,7 @@ contract Native721TokenStakingManagerV2 is
         PChainOwner memory disableOwner,
         uint16 delegationFeeBips,
         uint64 minStakeDuration,
-        uint256[] memory tokenIDs
+        uint256[] memory /* tokenIDs */
     ) external payable nonReentrant returns (bytes32) {
         return _initiateValidatorRegistration({
             nodeID: nodeID,
@@ -250,11 +250,14 @@ contract Native721TokenStakingManagerV2 is
             revert UnauthorizedOwner(_msgSender());
         }
 
-        _unlockNFTs(owner, $._posValidatorInfo[validationID].tokenIDs);
+        uint256[] memory tokens = $._posValidatorInfo[validationID].tokenIDs;
+        uint256 amount = tokens.length;
 
+        _unlockNFTs(owner, tokens);
+        emit ValidatorNFTsUnlocked(validationID, amount);
+
+        $._posValidatorInfo[validationID].totalTokens -= amount;
         delete $._posValidatorInfo[validationID].tokenIDs;
-
-        emit ValidatorNFTsUnlocked(validationID);
     }
 
     /**

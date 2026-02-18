@@ -7,10 +7,9 @@ pragma solidity 0.8.25;
 
 import {Test} from "@forge-std/Test.sol";
 import {StakingManagerTest} from "./StakingManagerTests.t.sol";
-import {Native721TokenStakingManager} from "../Native721TokenStakingManager.sol";
+import {Native721TokenStakingManager, ICMInitializable} from "../Native721TokenStakingManager.sol";
 import {StakingManager, StakingManagerSettings} from "../StakingManager.sol";
 import {ExampleRewardCalculator} from "../ExampleRewardCalculator.sol";
-import {ICMInitializable} from "../../utilities/ICMInitializable.sol";
 import {
     INativeMinter
 } from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/INativeMinter.sol";
@@ -794,11 +793,31 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         });
     }
 
-    function testValidationRegistrationWithoutNFT() public {
+    function testValidationRegistration() public {
+        // V1 - with NFTs
+        // - can't be unit-tested directly, will throw an EvmError in ValidatorManager
+        // - tested here to ensure the revert isn't caused by the V2 upgrade
+        vm.expectRevert(bytes(""));
+
+        _initiateValidatorRegistration({
+            nodeID: DEFAULT_NODE_ID,
+            blsPublicKey: DEFAULT_BLS_PUBLIC_KEY,
+            registrationExpiry: DEFAULT_EXPIRY,
+            remainingBalanceOwner: DEFAULT_P_CHAIN_OWNER,
+            disableOwner: DEFAULT_P_CHAIN_OWNER,
+            delegationFeeBips: DEFAULT_MINIMUM_DELEGATION_FEE_BIPS,
+            minStakeDuration: DEFAULT_MINIMUM_STAKE_DURATION,
+            stakeAmount: DEFAULT_MINIMUM_STAKE_AMOUNT
+        });
+    }
+
+    function testValidationRegistrationWithoutNFTs() public {
+        // V1 - No NFTs
         vm.expectRevert(
             abi.encodeWithSelector(Native721TokenStakingManager.InvalidNFTAmount.selector, 0)
         );
         uint256[] memory tokens = new uint256[](0);
+
         app.initiateValidatorRegistration{value: DEFAULT_MINIMUM_STAKE_AMOUNT}({
             nodeID: DEFAULT_NODE_ID,
             blsPublicKey: DEFAULT_BLS_PUBLIC_KEY,
@@ -811,7 +830,7 @@ contract Native721TokenStakingManagerTest is StakingManagerTest, IERC721Receiver
         });
     }
 
-    function testRevertRemovalDelgationNFTForNonOwner() public {
+    function testRevertRemovalDelegationNFTForNonOwner() public {
         bytes32 validationID = _registerDefaultValidator();
         bytes32 delegationID = _registerNFTDelegation(validationID, DEFAULT_DELEGATOR_ADDRESS);
 
