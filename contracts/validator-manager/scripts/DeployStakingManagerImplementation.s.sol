@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
-import {Native721TokenStakingManager} from "../Native721TokenStakingManager.sol";
+import {Native721TokenStakingManagerV2} from "../Native721TokenStakingManagerV2.sol";
 import {ICMInitializable} from "@utilities/ICMInitializable.sol";
 import {console} from "forge-std/console.sol";
 
@@ -32,10 +32,10 @@ contract DeployStakingManagerImplementation is Script {
         vm.startBroadcast();
 
         // Deploy new implementation
-        Native721TokenStakingManager newImplementation =
-            new Native721TokenStakingManager(ICMInitializable.Disallowed);
+        Native721TokenStakingManagerV2 newImplementation =
+            new Native721TokenStakingManagerV2(ICMInitializable.Disallowed);
 
-        console.log("Deployed new StakingManager implementation at:", address(newImplementation));
+        console.log("Deployed new StakingManager V2 implementation at:", address(newImplementation));
 
         vm.stopBroadcast();
 
