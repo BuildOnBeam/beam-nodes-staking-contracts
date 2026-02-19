@@ -28,7 +28,8 @@ contract GenerateStakingManagerData is Script {
     // settings:
     address constant NFT_TOKEN_ADDRESS = address(0x2CB343FAD3a2221824E9E4137b636C31300A8BF0);
     address constant ADMIN_ADDRESS = address(0x277280e8337E64a3A8E8b795D4E8E5e00BF6e203);
-    address constant VALIDATOR_MANAGER_ADDRESS = address(0x46d5a1B62095cE9497C6Cc7Ab1BDb8a09D7e3c36);
+    address constant VALIDATOR_MANAGER_ADDRESS =
+        address(0x46d5a1B62095cE9497C6Cc7Ab1BDb8a09D7e3c36);
     uint64 constant MINIMUM_STAKE_DURATION = 1 hours;
     uint256 constant MINIMUM_STAKE_AMOUNT = 20_000e18;
     uint256 constant MAXIMUM_STAKE_AMOUNT = 200_000_000e18;
@@ -42,6 +43,8 @@ contract GenerateStakingManagerData is Script {
         bytes32(hex"f94107902c8418dfcdf51d3f95429688abc7109e0f5b0e806c7e204d542e0761");
     uint64 constant EPOCH_OFFSET = 55998;
     address constant UPTIME_KEEPER = address(0xfEFFD4f8b89111CD085B80Ce994aB34C7e001a69);
+    // address constant WETH_ADDRESS = address(0xD51BFa777609213A653a2CD067c9A0132a2D316A);
+    address constant FEE_FLOW_ADDRESS = address(0x70D0); // TODO:
 
     function run() external {
         // Add settings struct for initialization
@@ -64,7 +67,10 @@ contract GenerateStakingManagerData is Script {
 
         // use if settings change and contract needs to be re-initialized
         bytes memory initSelector = abi.encodeWithSelector(
-            Native721TokenStakingManager.initialize.selector, settings, address(NFT_TOKEN_ADDRESS)
+            Native721TokenStakingManager.initialize.selector,
+            settings,
+            address(NFT_TOKEN_ADDRESS),
+            address(FEE_FLOW_ADDRESS)
         );
 
         string memory initData = vm.toString(initSelector);

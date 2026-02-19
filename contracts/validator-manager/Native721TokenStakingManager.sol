@@ -20,22 +20,25 @@ import {IERC721} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts@5.0.2/token/ERC20/IERC20.sol";
 import {Address} from "@openzeppelin/contracts@5.0.2/utils/Address.sol";
 import {ICMInitializable} from "@utilities/ICMInitializable.sol";
-import {Initializable} from
-    "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
-import {WarpMessage} from
-    "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable@5.0.2/proxy/utils/Initializable.sol";
+import {
+    WarpMessage
+} from "@avalabs/subnet-evm-contracts@1.2.0/contracts/interfaces/IWarpMessenger.sol";
 import {ValidatorMessages} from "./ValidatorMessages.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721Receiver.sol";
 
 import {Validator, ValidatorStatus, PChainOwner} from "./ACP99Manager.sol";
-import {OwnableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable@5.0.2/access/OwnableUpgradeable.sol";
+
 /**
  * @dev Implementation of the {INative721TokenStakingManager} interface.
  *
  * @custom:security-contact https://github.com/ava-labs/icm-contracts/blob/main/SECURITY.md
  */
-
 contract Native721TokenStakingManager is
     Initializable,
     StakingManager,
@@ -49,6 +52,7 @@ contract Native721TokenStakingManager is
     /// @custom:storage-location erc7201:avalanche-icm.storage.Native721TokenStakingManager
     struct Native721TokenStakingManagerStorage {
         IERC721 _token;
+        address _protocolRewardsRegistrar;
     }
     // solhint-enable private-vars-leading-underscore
 
@@ -60,10 +64,11 @@ contract Native721TokenStakingManager is
     uint64 public constant REWARD_CLAIM_DELAY = 7 days;
 
     error InvalidNFTAmount(uint256 nftAmount);
-    error InvalidTokenAddress(address tokenAddress);
     error InvalidInputLengths(uint256 inputLength1, uint256 inputLength2);
     error TooEarly(uint256 actualTime, uint256 expectedTime);
     error TooLate(uint256 actualTime, uint256 expectedTime);
+    error InvalidZeroAmount();
+    error InvalidZeroAddress();
 
     // solhint-disable ordering
     function _getERC721StakingManagerStorage()
@@ -92,18 +97,20 @@ contract Native721TokenStakingManager is
      */
     function initialize(
         StakingManagerSettings calldata settings,
-        IERC721 stakingToken
-    ) external reinitializer(3) {
+        IERC721 stakingToken,
+        address protocolRewardsRegistrar
+    ) external reinitializer(10) {
         __Ownable_init(settings.admin);
         __StakingManager_init(settings);
 
         Native721TokenStakingManagerStorage storage $ = _getERC721StakingManagerStorage();
 
         if (address(stakingToken) == address(0)) {
-            revert InvalidTokenAddress(address(stakingToken));
+            revert InvalidZeroAddress();
         }
 
         $._token = stakingToken;
+        $._protocolRewardsRegistrar = protocolRewardsRegistrar;
     }
 
     function onERC721Received(
@@ -269,15 +276,14 @@ contract Native721TokenStakingManager is
         if (!primary && $._totalRewardWeightNFT[epoch] == 0) return reward;
 
         if (primary) {
-            reward = (
-                ($._rewardPools[epoch][token] * $._accountRewardWeight[epoch][account])
-                    / $._totalRewardWeight[epoch]
-            ) - $._rewardWithdrawn[epoch][account][token];
+            reward =
+                (($._rewardPools[epoch][token] * $._accountRewardWeight[epoch][account])
+                        / $._totalRewardWeight[epoch]) - $._rewardWithdrawn[epoch][account][token];
         } else {
-            reward = (
-                ($._rewardPoolsNFT[epoch][token] * $._accountRewardWeightNFT[epoch][account])
-                    / $._totalRewardWeightNFT[epoch]
-            ) - $._rewardWithdrawnNFT[epoch][account][token];
+            reward =
+                (($._rewardPoolsNFT[epoch][token] * $._accountRewardWeightNFT[epoch][account])
+                        / $._totalRewardWeightNFT[epoch])
+                    - $._rewardWithdrawnNFT[epoch][account][token];
         }
         return reward;
     }
@@ -321,15 +327,31 @@ contract Native721TokenStakingManager is
         uint64 epoch,
         address token,
         uint256 amount
-    ) external onlyOwner nonReentrant {
+    ) external nonReentrant {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
+        Native721TokenStakingManagerStorage storage $$ = _getERC721StakingManagerStorage();
+
+        // restrict to only be called by specific contract or owner
+        address sender = _msgSender();
+        if (sender != $$._protocolRewardsRegistrar && sender != owner()) {
+            revert UnauthorizedOwner(sender);
+        }
+
+        // input checks
+        if (token == address(0)) {
+            revert InvalidZeroAddress();
+        }
+
+        if (amount == 0) {
+            revert InvalidZeroAmount();
+        }
 
         if (primary) {
             $._rewardPools[epoch][token] += amount;
         } else {
             $._rewardPoolsNFT[epoch][token] += amount;
         }
-        IERC20(token).transferFrom(_msgSender(), address(this), amount);
+        IERC20(token).transferFrom(sender, address(this), amount);
         emit RewardRegistered(primary, epoch, token, amount);
     }
 
@@ -411,7 +433,10 @@ contract Native721TokenStakingManager is
      * @notice See {StakingManager-_unlock}
      * Note: Must be guarded with reentrancy guard for safe transfer.
      */
-    function _unlock(address to, uint256 value) internal virtual override {
+    function _unlock(
+        address to,
+        uint256 value
+    ) internal virtual override {
         payable(to).sendValue(value);
     }
 
@@ -426,9 +451,8 @@ contract Native721TokenStakingManager is
         uint256[] memory tokenIDs
     ) internal returns (uint256) {
         for (uint256 i = 0; i < tokenIDs.length; i++) {
-            _getERC721StakingManagerStorage()._token.safeTransferFrom(
-                _msgSender(), address(this), tokenIDs[i]
-            );
+            _getERC721StakingManagerStorage()._token
+                .safeTransferFrom(_msgSender(), address(this), tokenIDs[i]);
         }
         return tokenIDs.length;
     }
@@ -440,7 +464,10 @@ contract Native721TokenStakingManager is
      * @param to The address that will receive the unlocked NFTs.
      * @param tokenIDs The array of token IDs to be unlocked and transferred.
      */
-    function _unlockNFTs(address to, uint256[] memory tokenIDs) internal virtual {
+    function _unlockNFTs(
+        address to,
+        uint256[] memory tokenIDs
+    ) internal virtual {
         for (uint256 i = 0; i < tokenIDs.length; i++) {
             _getERC721StakingManagerStorage()._token.transferFrom(address(this), to, tokenIDs[i]);
         }
@@ -450,7 +477,11 @@ contract Native721TokenStakingManager is
      * @notice See {StakingManager-_reward}
      * @dev Distributes ERC20 rewards to stakers
      */
-    function _reward(address, /*account*/ uint256 /*amount*/ ) internal virtual override {}
+    function _reward(
+        address,
+        /*account*/
+        uint256 /*amount*/
+    ) internal virtual override {}
 
     /**
      * @notice See {INative721TokenStakingManager-getEpoch}.
@@ -503,14 +534,15 @@ contract Native721TokenStakingManager is
         // Lock the stake in the contract.
         _lockNFTs(tokenIDs);
 
-        bytes32 validationID = $._manager.initiateValidatorRegistration({
-            nodeID: nodeID,
-            blsPublicKey: blsPublicKey,
-            registrationExpiry: registrationExpiry,
-            remainingBalanceOwner: remainingBalanceOwner,
-            disableOwner: disableOwner,
-            weight: valueToWeight(_lock(stakeAmount))
-        });
+        bytes32 validationID = $._manager
+            .initiateValidatorRegistration({
+                nodeID: nodeID,
+                blsPublicKey: blsPublicKey,
+                registrationExpiry: registrationExpiry,
+                remainingBalanceOwner: remainingBalanceOwner,
+                disableOwner: disableOwner,
+                weight: valueToWeight(_lock(stakeAmount))
+            });
 
         $._posValidatorInfo[validationID].owner = _msgSender();
         $._posValidatorInfo[validationID].delegationFeeBips = delegationFeeBips;
@@ -558,9 +590,9 @@ contract Native721TokenStakingManager is
         }
 
         if ($._posValidatorInfo[validationID].totalTokens + tokenIDs.length > $._maximumNFTAmount) {
-            revert InvalidNFTAmount(
-                uint64($._posValidatorInfo[validationID].totalTokens + tokenIDs.length)
-            );
+            revert InvalidNFTAmount(uint64(
+                    $._posValidatorInfo[validationID].totalTokens + tokenIDs.length
+                ));
         }
 
         uint64 nonce = ++$._posValidatorInfo[validationID].tokenNonce;

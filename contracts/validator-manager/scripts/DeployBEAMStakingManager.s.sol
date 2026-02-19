@@ -11,10 +11,12 @@ import {ValidatorManager} from "../ValidatorManager.sol";
 import {IERC721} from "@openzeppelin/contracts@5.0.2/token/ERC721/IERC721.sol";
 import {console} from "forge-std/console.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts@5.0.2/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ITransparentUpgradeableProxy} from
-    "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts@5.0.2/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 /**
  * @notice Script to deploy and initialize Native721TokenStakingManager with a new proxy
@@ -45,10 +47,13 @@ contract DeployBEAMStakingManager is Script {
     // uint256 constant MINIMUM_DELEGATION_AMOUNT = 100e18;
     // uint256 constant WEIGHT_TO_VALUE_FACTOR = 1e18;
     // bytes32 constant UPTIME_BLOCKCHAIN_ID = bytes32(hex"f94107902c8418dfcdf51d3f95429688abc7109e0f5b0e806c7e204d542e0761"); //mainnet
+    // address constant WETH_ADDRESS = address(0xF65B6f9c94187276C7d91F4F74134751d248bFeA);
+    // address constant FEE_FLOW_ADDRESS = address(0xb25DeeFfBedd8a7149d634AEEc864C9a6Beb61c9);
 
     address constant NFT_TOKEN_ADDRESS = address(0x732080D7aD6A9C50039d7Ad7F5BD0a79670f7654);
     address constant ADMIN_ADDRESS = address(0xd68F802fD0B6f56524F379805DD8FcC152DB9d5c);
-    address constant VALIDATOR_MANAGER_ADDRESS = address(0x6093e44a6652Db655cDbD7EfA0A3c8BFb28DfD36);
+    address constant VALIDATOR_MANAGER_ADDRESS =
+        address(0x6093e44a6652Db655cDbD7EfA0A3c8BFb28DfD36);
     uint64 constant MINIMUM_STAKE_DURATION = 1 hours;
     uint256 constant MINIMUM_STAKE_AMOUNT = 20_000e18;
     uint256 constant MAXIMUM_STAKE_AMOUNT = 200_000_000e18;
@@ -60,6 +65,8 @@ contract DeployBEAMStakingManager is Script {
     uint256 constant WEIGHT_TO_VALUE_FACTOR = 1e18;
     bytes32 constant UPTIME_BLOCKCHAIN_ID =
         bytes32(hex"7f78fe8ca06cefa186ef29c15231e45e1056cd8319ceca0695ca61099e610355");
+    // address constant WETH_ADDRESS = address(0xD51BFa777609213A653a2CD067c9A0132a2D316A);
+    address constant FEE_FLOW_ADDRESS = address(0x70D0); // TODO:
 
     function run() external {
         // Start broadcasting transactions
@@ -89,7 +96,10 @@ contract DeployBEAMStakingManager is Script {
         });
 
         bytes memory initData = abi.encodeWithSelector(
-            Native721TokenStakingManager.initialize.selector, settings, IERC721(NFT_TOKEN_ADDRESS)
+            Native721TokenStakingManager.initialize.selector,
+            settings,
+            IERC721(NFT_TOKEN_ADDRESS),
+            address(FEE_FLOW_ADDRESS)
         );
 
         // Deploy proxy with initialization
