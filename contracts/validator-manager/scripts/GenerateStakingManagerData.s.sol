@@ -31,7 +31,7 @@ contract GenerateStakingManagerData is Script {
     address constant VALIDATOR_MANAGER_ADDRESS =
         address(0x46d5a1B62095cE9497C6Cc7Ab1BDb8a09D7e3c36);
     uint64 constant MINIMUM_STAKE_DURATION = 1 hours;
-    uint256 constant MINIMUM_STAKE_AMOUNT = 20_000e18;
+    uint256 constant MINIMUM_STAKE_AMOUNT = 20_000e18; // TODO: V1 -> V2
     uint256 constant MAXIMUM_STAKE_AMOUNT = 200_000_000e18;
     uint64 constant UNLOCK_PERIOD = 21 days;
     uint16 constant MINIMUM_DELEGATION_FEE = 100; // 1% in basis points
