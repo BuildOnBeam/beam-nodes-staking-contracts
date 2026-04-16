@@ -239,6 +239,43 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard, ERC165 {
     }
 
     /**
+     * @notice Gets the redemption amounts for multiple token IDs.
+     * @param tokenIds The token IDs to check.
+     * @return amounts The redemption amounts for each token ID (in wei).
+     */
+    function getRedemptionAmounts(
+        uint256[] calldata tokenIds
+    ) public view virtual returns (uint256[] memory amounts) {
+        uint256 len = tokenIds.length;
+        if (len == 0) revert EmptyTokenIds();
+
+        amounts = new uint256[](len);
+        for (uint256 i; i < len; i++) {
+            amounts[i] = getRedemptionAmount(tokenIds[i]);
+        }
+
+        return amounts;
+    }
+
+    /**
+     * @notice Gets the total redemption amount for multiple token IDs.
+     * @param tokenIds The token IDs to check.
+     * @return totalAmount The total redemption amount (in wei).
+     */
+    function getTotalRedemptionAmount(
+        uint256[] calldata tokenIds
+    ) public view virtual returns (uint256 totalAmount) {
+        uint256 len = tokenIds.length;
+        if (len == 0) revert EmptyTokenIds();
+
+        for (uint256 i; i < len; i++) {
+            totalAmount += getRedemptionAmount(tokenIds[i]);
+        }
+
+        return totalAmount;
+    }
+
+    /**
      * @notice Returns whether a token ID is alternatively priced.
      * @dev Reads from the alternate-pricing bitmap.
      * @param tokenId The token ID to check.
