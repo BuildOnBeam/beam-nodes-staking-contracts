@@ -70,6 +70,7 @@ contract Native721TokenStakingManagerV2 is
     error InvalidZeroAmount();
     error InvalidZeroAddress();
     error MethodDeprecated();
+    error UnlockedAlready(bytes32 validationID);
 
     event ValidatorNFTsUnlocked(bytes32 indexed validationID, uint256 totalTokens);
 
@@ -252,6 +253,10 @@ contract Native721TokenStakingManagerV2 is
 
         uint256[] memory tokens = $._posValidatorInfo[validationID].tokenIDs;
         uint256 amount = tokens.length;
+
+        if ($._unlocked[validationID] || amount == 0) {
+            revert UnlockedAlready(validationID);
+        }
 
         _unlockNFTs(owner, tokens);
         emit ValidatorNFTsUnlocked(validationID, amount);

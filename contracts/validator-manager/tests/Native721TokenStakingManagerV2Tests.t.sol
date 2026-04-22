@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: Ecosystem
 
+// run via `forge test -vvv --match-path "contracts/validator-manager/tests/Native721TokenStakingManagerV2Tests.t.sol"`
+
 pragma solidity 0.8.25;
 
 import {Test} from "@forge-std/Test.sol";
@@ -77,6 +79,13 @@ contract Mock721StakingManager is Native721TokenStakingManagerV2 {
     ) public view returns (PoSValidatorInfo memory info) {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         info = $._posValidatorInfo[validationID];
+    }
+
+    function _unlockValidator(
+        bytes32 validationID
+    ) internal override {
+        StakingManagerStorage storage $ = _getStakingManagerStorage();
+        $._unlocked[validationID] = true;
     }
 }
 
@@ -1114,6 +1123,42 @@ contract Native721TokenStakingManagerV2Test is StakingManagerTest, IERC721Receiv
             stakingToken.balanceOf(address(this)),
             finalBalance,
             "No NFTs should be transferred here"
+        );
+    }
+
+    function testUnlockUnlockedValidatorNFTs() public {
+        bytes32 validationID = _mockValidatorRegistration();
+
+        _downgradeToV1();
+
+        // V1 initiate removal (no NFTs transferred back)
+        uint256 balance = stakingToken.balanceOf(address(this));
+        vm.warp(DEFAULT_COMPLETION_TIMESTAMP + 1);
+        app.initiateValidatorRemoval(validationID, false, 0);
+        vm.warp(block.timestamp + DEFAULT_UNLOCK_DURATION + 1);
+
+        _setUpMock();
+
+        // Mocked V1 unlock after lockup period (NFTs transferred back)
+        app.unlockValidator(validationID);
+        assertEq(
+            stakingToken.balanceOf(address(this)),
+            balance + 3,
+            "3 NFTs should be transferred back to the validator owner"
+        );
+
+        _upgradeToV2();
+
+        // V2 unlock without ending the validation (should revert since already unlocked)
+        uint256 newBalance = stakingToken.balanceOf(address(this));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                Native721TokenStakingManagerV2.UnlockedAlready.selector, validationID
+            )
+        );
+        Native721TokenStakingManagerV2(address(app)).unlockValidatorNFTs(validationID);
+        assertEq(
+            stakingToken.balanceOf(address(this)), newBalance, "No NFTs should be transferred here"
         );
     }
 

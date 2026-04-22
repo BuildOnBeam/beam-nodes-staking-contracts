@@ -803,7 +803,7 @@ abstract contract StakingManager is
 
     function _unlockValidator(
         bytes32 validationID
-    ) internal {
+    ) internal virtual {
         StakingManagerStorage storage $ = _getStakingManagerStorage();
         Validator memory validator = $._manager.getValidator(validationID);
 
