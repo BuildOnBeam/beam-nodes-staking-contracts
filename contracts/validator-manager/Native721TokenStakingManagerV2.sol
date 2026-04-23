@@ -95,7 +95,7 @@ contract Native721TokenStakingManagerV2 is
 
     /**
      * @notice Initialize the ERC721 token staking manager
-     * @dev Uses reinitializer(2) on the PoS staking contracts to make sure after migration from PoA, the PoS contracts can reinitialize with its needed values.
+     * @dev Uses reinitializer(n) on the PoS staking contracts to make sure after migration from PoA, the PoS contracts can reinitialize with its needed values.
      * @param settings Initial settings for the PoS validator manager
      * @param stakingToken The ERC721 token to be staked
      */
@@ -103,7 +103,7 @@ contract Native721TokenStakingManagerV2 is
         StakingManagerSettings calldata settings,
         IERC721 stakingToken,
         address protocolRewardsRegistrar
-    ) external reinitializer(10) {
+    ) external reinitializer(100) {
         __Ownable_init(settings.admin);
         __StakingManager_init(settings);
 
