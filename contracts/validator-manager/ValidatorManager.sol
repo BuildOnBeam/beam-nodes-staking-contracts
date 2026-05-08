@@ -768,6 +768,17 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager, Vo
         return fixedID;
     }
 
+    /**
+     * @dev Returns the owner of the validator with the given validation ID by calling the StakingMgr contract.
+     */
+    function _getOwnerOfValidator(
+        bytes32 validationId
+    ) internal view virtual returns (address) {
+        return IStakingManagerOwner(owner()).getOwnerOfValidator(validationId);
+    }
+
+    // ========= ERC-5805/6372 Votes functionality
+
     function clock() public view override returns (uint48) {
         return uint48(block.timestamp);
     }
@@ -796,12 +807,6 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager, Vo
         return _checkpoints(account, pos);
     }
 
-    function _getOwnerOfValidator(
-        bytes32 validationId
-    ) internal virtual returns (address validatorOwner) {
-        return IStakingManagerOwner(owner()).getOwnerOfValidator(validationId);
-    }
-
     /**
      * @dev Returns the voting units of an `account`.
      */
@@ -811,23 +816,31 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager, Vo
         return _getValidatorManagerStorage()._validatorOwnerWeights[account];
     }
 
-    function backfillValidatorOwnerWeights(
-        address[] calldata owners,
-        uint64[] calldata weights
-    ) external virtual adminOnly {
-        if (owners.length != weights.length) {
-            revert InputLengthMismatch();
-        }
+    // ========= ERC20Votes Mock interface
 
-        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
-        for (uint256 i = 0; i < owners.length; i++) {
-            address owner = owners[i];
-            uint64 weight = weights[i];
-
-            $._validatorOwnerWeights[owner] += weight;
-            _transferVotingUnits(address(0), owner, weight);
-        }
+    function balanceOf(
+        address account
+    ) external view virtual returns (uint256) {
+        return _getVotingUnits(account);
     }
+
+    function totalSupply() external view virtual returns (uint256) {
+        return l1TotalWeight();
+    }
+
+    function decimals() external view virtual returns (uint8) {
+        return 0;
+    }
+
+    function name() external pure virtual returns (string memory) {
+        return "Stake Weight";
+    }
+
+    function symbol() external pure virtual returns (string memory) {
+        return "PoS";
+    }
+
+    // ========= Admin and ownership functions
 
     function migrate(
         address admin
@@ -854,6 +867,24 @@ contract ValidatorManager is Initializable, OwnableUpgradeable, ACP99Manager, Vo
     ) external virtual adminOnly {
         OwnableUpgradeable ownable = OwnableUpgradeable(ownedContract);
         ownable.transferOwnership(newOwner);
+    }
+
+    function backfillValidatorOwnerWeights(
+        address[] calldata owners,
+        uint64[] calldata weights
+    ) external virtual adminOnly {
+        if (owners.length != weights.length) {
+            revert InputLengthMismatch();
+        }
+
+        ValidatorManagerStorage storage $ = _getValidatorManagerStorage();
+        for (uint256 i = 0; i < owners.length; i++) {
+            address owner = owners[i];
+            uint64 weight = weights[i];
+
+            $._validatorOwnerWeights[owner] += weight;
+            _transferVotingUnits(address(0), owner, weight);
+        }
     }
 
     function _checkAdminOnly() internal view virtual {
