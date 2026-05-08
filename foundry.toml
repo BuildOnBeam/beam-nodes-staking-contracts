@@ -27,3 +27,7 @@ wrap_comments = false
 #   },
 #   "solidity.formatter": "forge",
 # }
+
+[lint]
+severity = ["high", "med", "low"]
+exclude_lints = ["unsafe-typecast", "erc20-unchecked-transfer"]
