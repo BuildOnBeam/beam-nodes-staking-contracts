@@ -340,9 +340,9 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard, ERC165 {
         (uint256 slot, uint256 bit) = _bitmapLocation(tokenId);
 
         if (value) {
-            _alternatePriceBitmap[slot] |= (1 << bit);
+            _alternatePriceBitmap[slot] |= (uint256(1) << bit);
         } else {
-            _alternatePriceBitmap[slot] &= ~(1 << bit);
+            _alternatePriceBitmap[slot] &= ~(uint256(1) << bit);
         }
     }
 
@@ -375,7 +375,7 @@ contract NFTRedeemer is Ownable, Pausable, ReentrancyGuard, ERC165 {
             uint256 tokenId = tokenIds[i];
 
             (uint256 slot, uint256 bit) = _bitmapLocation(tokenId);
-            uint256 bitMask = (1 << bit);
+            uint256 bitMask = uint256(1) << bit;
 
             // Check if we have already encountered this slot
             bool found = false;
