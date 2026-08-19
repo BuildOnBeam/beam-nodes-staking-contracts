@@ -7,6 +7,10 @@ evm_version = 'shanghai'
 test = 'tests'
 bytecode_hash = "none"
 fuzz = { runs = 5_000 }
+fs_permissions = [
+	{ access = "read", path = "./" },
+	{ access = "write", path = "./" },
+]
 
 [fmt]
 line_length = 100
