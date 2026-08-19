@@ -33,7 +33,7 @@ contract GenerateStakingManagerDataTestnet is Script {
     uint64 constant MINIMUM_STAKE_DURATION = 1 hours;
     uint256 constant MINIMUM_STAKE_AMOUNT = 50_000e18; // new for V2!
     uint256 constant MAXIMUM_STAKE_AMOUNT = 200_000_000e18;
-    uint64 constant UNLOCK_PERIOD = 1 hours;
+    uint64 constant UNLOCK_PERIOD = 5 minutes; // new for V2!
     uint16 constant MINIMUM_DELEGATION_FEE = 100; // 0.1% in basis points
     uint64 constant EPOCH_DURATION = 2 days;
     uint256 constant MAXIMUM_NFT_AMOUNT = 1000;
