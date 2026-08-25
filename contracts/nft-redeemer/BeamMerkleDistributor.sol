@@ -8,6 +8,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IBeamMerkleDistributor} from "./interfaces/IBeamMerkleDistributor.sol";
 
@@ -24,6 +25,7 @@ contract BeamMerkleDistributor is
     address public immutable override token;
     bytes32 public override merkleRoot;
     uint256 public endTime;
+    string internal _uri;
 
     mapping(address => bool) public override isClaimed;
 
@@ -31,13 +33,23 @@ contract BeamMerkleDistributor is
         address token_,
         bytes32 merkleRoot_,
         uint256 endTime_,
-        address owner_
+        address owner_,
+        string memory uri_
     ) Ownable(owner_) {
         token = token_;
         merkleRoot = merkleRoot_;
         endTime = endTime_;
+        _uri = uri_; // "ipfs://<CID>"
 
         _pause(); // Start in paused state
+    }
+
+    function pause() external virtual onlyOwner {
+        _pause();
+    }
+
+    function unpause() external virtual onlyOwner {
+        _unpause();
     }
 
     function setMerkleRoot(
@@ -48,16 +60,20 @@ contract BeamMerkleDistributor is
 
     function setEndTime(
         uint256 endTime_
-    ) external virtual onlyOwner {
+    ) external virtual onlyOwner nonReentrant {
         endTime = endTime_;
     }
 
-    function pause() external virtual onlyOwner {
-        _pause();
+    function setURI(
+        string memory newuri
+    ) external virtual onlyOwner {
+        _uri = newuri;
     }
 
-    function unpause() external virtual onlyOwner {
-        _unpause();
+    function uri(
+        address account
+    ) public view virtual returns (string memory) {
+        return string.concat(_uri, "/", Strings.toHexString(uint160(account), 20), ".json");
     }
 
     function withdraw(

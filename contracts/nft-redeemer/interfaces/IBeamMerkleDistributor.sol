@@ -17,6 +17,10 @@ interface IBeamMerkleDistributor {
     function isClaimed(
         address account
     ) external view returns (bool);
+    // Returns the URI of the merkle proofs
+    function uri(
+        address account
+    ) external view returns (string memory);
     // Claim the given amount of the token to the given address. Reverts if the inputs are invalid.
     function claim(
         address account,

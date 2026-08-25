@@ -31,6 +31,7 @@ contract BeamMerkleDistributorTest is Test {
     address bob = address(0xCAFE);
     address carol = address(0xC0DE);
     address dave = address(0xD00D);
+    string initialURI = "ipfs://beam-merkle";
 
     uint256 claimAmount = 100e18;
     uint256 endTime;
@@ -76,7 +77,7 @@ contract BeamMerkleDistributorTest is Test {
         leaf = keccak256(bytes.concat(keccak256(abi.encodePacked(alice, claimAmount))));
         endTime = block.timestamp + 7 days;
 
-        distributor = new BeamMerkleDistributor(address(token), leaf, endTime, owner);
+        distributor = new BeamMerkleDistributor(address(token), leaf, endTime, owner, initialURI);
     }
 
     function testConstructorSetsInitialState() public view {
@@ -84,6 +85,7 @@ contract BeamMerkleDistributorTest is Test {
         assertEq(distributor.merkleRoot(), leaf);
         assertEq(distributor.endTime(), endTime);
         assertEq(distributor.owner(), owner);
+        assertEq(distributor.uri(), initialURI);
         assertTrue(distributor.paused());
     }
 
@@ -216,7 +218,7 @@ contract BeamMerkleDistributorTest is Test {
         bytes32 root = _hashPair(aliceLeaf, bobLeaf);
 
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), claimAmount + bobAmount);
 
@@ -352,8 +354,9 @@ contract BeamMerkleDistributorTest is Test {
 
     function testClaimZeroAmountIfInMerkleRoot() public {
         bytes32 zeroLeaf = _leafFor(alice, 0);
-        BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), zeroLeaf, block.timestamp + 1 days, owner);
+        BeamMerkleDistributor localDistributor = new BeamMerkleDistributor(
+            address(token), zeroLeaf, block.timestamp + 1 days, owner, ""
+        );
 
         vm.prank(owner);
         localDistributor.unpause();
@@ -444,7 +447,7 @@ contract BeamMerkleDistributorTest is Test {
         uint256 amount = bound(uint256(fuzzAmount), 1, 1e30);
         bytes32 root = keccak256(bytes.concat(keccak256(abi.encodePacked(alice, amount))));
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 7 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 7 days, owner, "");
 
         token.mint(address(localDistributor), amount);
 
@@ -511,7 +514,7 @@ contract BeamMerkleDistributorTest is Test {
 
         bytes32 root = _leafFor(alice, amount);
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), amount);
 
@@ -547,7 +550,7 @@ contract BeamMerkleDistributorTest is Test {
         bytes32 rootOne = _hashPair(aliceLeaf, bobLeaf);
 
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), rootOne, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), rootOne, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), aliceAmount + bobAmount + carolAmount);
 
@@ -597,7 +600,7 @@ contract BeamMerkleDistributorTest is Test {
         bytes32 root = _hashPair(aliceLeaf, bobLeaf);
 
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), aliceAmount + bobAmount);
 
@@ -629,7 +632,7 @@ contract BeamMerkleDistributorTest is Test {
         bytes32 root = _hashPair(aliceLeaf, bobLeaf);
 
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), aliceAmount + bobAmount);
 
@@ -658,7 +661,7 @@ contract BeamMerkleDistributorTest is Test {
             _fourLeafRootAndProofForAlice(aliceAmount, bobAmount, carolAmount, daveAmount);
 
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), aliceAmount + bobAmount + carolAmount + daveAmount);
 
@@ -691,7 +694,7 @@ contract BeamMerkleDistributorTest is Test {
         bytes32 root = _hashPair(aliceLeaf, bobLeaf);
 
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), aliceAmount + bobAmount);
 
@@ -741,7 +744,7 @@ contract BeamMerkleDistributorTest is Test {
         bytes32 root = _hashPair(aliceLeaf, bobLeaf);
 
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), aliceAmount + bobAmount);
 
@@ -776,7 +779,7 @@ contract BeamMerkleDistributorTest is Test {
             _fourLeafRootAndProofForAlice(aliceAmount, bobAmount, carolAmount, daveAmount);
 
         BeamMerkleDistributor localDistributor =
-            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner);
+            new BeamMerkleDistributor(address(token), root, block.timestamp + 1 days, owner, "");
 
         token.mint(address(localDistributor), aliceAmount + bobAmount + carolAmount + daveAmount);
 
