@@ -33,7 +33,7 @@ contract GenerateStakingManagerDataTestnet is Script {
     uint64 constant MINIMUM_STAKE_DURATION = 1 hours;
     uint256 constant MINIMUM_STAKE_AMOUNT = 50_000e18; // new for V2!
     uint256 constant MAXIMUM_STAKE_AMOUNT = 200_000_000e18;
-    uint64 constant UNLOCK_PERIOD = 5 minutes; // new for V2!
+    uint64 constant UNLOCK_PERIOD = 30 minutes; // new for V2!
     uint16 constant MINIMUM_DELEGATION_FEE = 100; // 0.1% in basis points
     uint64 constant EPOCH_DURATION = 2 days;
     uint256 constant MAXIMUM_NFT_AMOUNT = 1000;
@@ -44,7 +44,8 @@ contract GenerateStakingManagerDataTestnet is Script {
     uint64 constant EPOCH_OFFSET = 0;
     address constant UPTIME_KEEPER = address(0xd68F802fD0B6f56524F379805DD8FcC152DB9d5c);
     // address constant WETH_ADDRESS = address(0xF65B6f9c94187276C7d91F4F74134751d248bFeA);
-    address constant FEE_FLOW_ADDRESS = address(0xb25DeeFfBedd8a7149d634AEEc864C9a6Beb61c9);
+    address constant ADDITIONAL_REWARDS_REGISTRAR_ADDRESS =
+        address(0xb25DeeFfBedd8a7149d634AEEc864C9a6Beb61c9); // FeeFlow contract
 
     function run() external {
         // Add settings struct for initialization
@@ -70,7 +71,7 @@ contract GenerateStakingManagerDataTestnet is Script {
             Native721TokenStakingManager.initialize.selector,
             settings,
             address(NFT_TOKEN_ADDRESS),
-            address(FEE_FLOW_ADDRESS)
+            address(ADDITIONAL_REWARDS_REGISTRAR_ADDRESS)
         );
 
         string memory initData = vm.toString(initSelector);
