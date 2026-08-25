@@ -3,15 +3,16 @@
 -- CSV:
 MERKLE_INPUT_PATH=contracts/nft-redeemer/scripts/merkle_example.csv \
 MERKLE_INPUT_FORMAT=csv \
-MERKLE_ALL_PROOFS_OUTPUT_PATH=contracts/nft-redeemer/scripts/proofs.json \
 forge script contracts/nft-redeemer/scripts/GenerateBeamMerkleProofs.s.sol:GenerateBeamMerkleProofs
 
 -- JSON entries mode:
 MERKLE_INPUT_PATH=contracts/nft-redeemer/scripts/merkle_example.json \
 MERKLE_INPUT_FORMAT=json \
 MERKLE_JSON_MODE=entries \
-MERKLE_ALL_PROOFS_OUTPUT_PATH=contracts/nft-redeemer/scripts/proofs.json \
 forge script contracts/nft-redeemer/scripts/GenerateBeamMerkleProofs.s.sol:GenerateBeamMerkleProofs
+
+Optional:
+MERKLE_OUTPUT_DIR=contracts/nft-redeemer/scripts/output
 
 See merkle_example.csv and merkle_example.json for example input formats.
 */
@@ -29,6 +30,7 @@ contract GenerateBeamMerkleProofs is Script {
     function run() external {
         string memory inputPath = vm.envString("MERKLE_INPUT_PATH");
         string memory format = vm.envOr("MERKLE_INPUT_FORMAT", string(""));
+        string memory outputDir = _outputDir();
 
         Entry[] memory entries = _loadEntries(inputPath, format);
         require(entries.length > 0, "no entries");
@@ -43,7 +45,7 @@ contract GenerateBeamMerkleProofs is Script {
 
         _maybeWriteRootFile(root);
         _maybeWriteSingleProof(entries, leaves, layers);
-        _maybeWriteAllProofs(entries, layers, root);
+        _maybeWriteAllProofs(entries, layers, root, outputDir);
     }
 
     function _loadEntries(
@@ -363,34 +365,77 @@ contract GenerateBeamMerkleProofs is Script {
     function _maybeWriteAllProofs(
         Entry[] memory entries,
         bytes32[][] memory layers,
-        bytes32 root
+        bytes32 root,
+        string memory outputDir
     ) internal {
-        string memory proofsPath = vm.envOr("MERKLE_ALL_PROOFS_OUTPUT_PATH", string(""));
-        if (bytes(proofsPath).length == 0) return;
+        _ensureDir(outputDir);
+        string memory proofsPath = _joinPath(outputDir, "proofs.json");
 
         vm.writeFile(
             proofsPath, string.concat('{"merkleRoot":"', vm.toString(root), '","claims":{')
         );
         for (uint256 i; i < entries.length; ++i) {
             bytes32[] memory proof = _proofAt(layers, i);
-            string memory line = string.concat(
-                '"',
-                vm.toString(entries[i].account),
-                '":{"amount":"',
-                vm.toString(entries[i].amount),
-                '","proof":',
-                _proofArrayToJson(proof),
-                "}"
-            );
-
-            if (i + 1 != entries.length) {
-                line = string.concat(line, ",");
-            }
-            vm.writeLine(proofsPath, line);
+            vm.writeLine(proofsPath, _claimsIndexLine(entries[i], proof, i + 1 != entries.length));
+            _writeClaimProofFile(outputDir, entries[i], proof);
         }
         vm.writeLine(proofsPath, "}}");
 
         console2.log("Wrote all proofs JSON to:", proofsPath);
+        console2.log("Wrote per-claim JSON files to:", outputDir);
+    }
+
+    function _claimsIndexLine(
+        Entry memory entry,
+        bytes32[] memory proof,
+        bool withComma
+    ) internal pure returns (string memory) {
+        string memory line = string.concat(
+            '"',
+            vm.toString(entry.account),
+            '":{"amount":"',
+            vm.toString(entry.amount),
+            '","proof":',
+            _proofArrayToJson(proof),
+            "}"
+        );
+
+        if (withComma) {
+            return string.concat(line, ",");
+        }
+        return line;
+    }
+
+    function _writeClaimProofFile(
+        string memory outputDir,
+        Entry memory entry,
+        bytes32[] memory proof
+    ) internal {
+        string memory claimFileName =
+            string.concat(_toLowerString(vm.toString(entry.account)), ".json");
+        string memory claimPath = _joinPath(outputDir, claimFileName);
+        vm.writeFile(claimPath, _formatClaimProofJson(entry.account, entry.amount, proof));
+    }
+
+    function _outputDir() internal view returns (string memory) {
+        return vm.envOr("MERKLE_OUTPUT_DIR", string("contracts/nft-redeemer/scripts/output"));
+    }
+
+    function _ensureDir(
+        string memory path
+    ) internal {
+        vm.createDir(path, true);
+    }
+
+    function _joinPath(
+        string memory base,
+        string memory name
+    ) internal pure returns (string memory) {
+        bytes memory b = bytes(base);
+        if (b.length > 0 && b[b.length - 1] == "/") {
+            return string.concat(base, name);
+        }
+        return string.concat(base, "/", name);
     }
 
     function _leaf(
@@ -422,6 +467,23 @@ contract GenerateBeamMerkleProofs is Script {
             '","leaf":"',
             vm.toString(leaf),
             '","proof":['
+        );
+
+        for (uint256 i; i < proof.length; ++i) {
+            if (i > 0) json = string.concat(json, ",");
+            json = string.concat(json, '"', vm.toString(proof[i]), '"');
+        }
+
+        return string.concat(json, "]}");
+    }
+
+    function _formatClaimProofJson(
+        address account,
+        uint256 amount,
+        bytes32[] memory proof
+    ) internal pure returns (string memory) {
+        string memory json = string.concat(
+            '{"account":"', vm.toString(account), '","amount":"', vm.toString(amount), '","proof":['
         );
 
         for (uint256 i; i < proof.length; ++i) {
@@ -613,5 +675,15 @@ contract GenerateBeamMerkleProofs is Script {
     ) internal pure returns (bytes1) {
         if (c >= 0x41 && c <= 0x5A) return bytes1(uint8(c) + 32);
         return c;
+    }
+
+    function _toLowerString(
+        string memory s
+    ) internal pure returns (string memory) {
+        bytes memory bs = bytes(s);
+        for (uint256 i; i < bs.length; ++i) {
+            bs[i] = _toLower(bs[i]);
+        }
+        return string(bs);
     }
 }
