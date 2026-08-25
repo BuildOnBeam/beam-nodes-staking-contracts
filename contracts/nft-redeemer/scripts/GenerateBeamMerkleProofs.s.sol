@@ -369,14 +369,14 @@ contract GenerateBeamMerkleProofs is Script {
         if (bytes(proofsPath).length == 0) return;
 
         vm.writeFile(
-            proofsPath, string.concat('{"merkleRoot":"', vm.toString(root), '","claims":[')
+            proofsPath, string.concat('{"merkleRoot":"', vm.toString(root), '","claims":{')
         );
         for (uint256 i; i < entries.length; ++i) {
             bytes32[] memory proof = _proofAt(layers, i);
             string memory line = string.concat(
-                '{"account":"',
+                '"',
                 vm.toString(entries[i].account),
-                '","amount":"',
+                '":{"amount":"',
                 vm.toString(entries[i].amount),
                 '","proof":',
                 _proofArrayToJson(proof),
@@ -388,7 +388,7 @@ contract GenerateBeamMerkleProofs is Script {
             }
             vm.writeLine(proofsPath, line);
         }
-        vm.writeLine(proofsPath, "]}");
+        vm.writeLine(proofsPath, "}}");
 
         console2.log("Wrote all proofs JSON to:", proofsPath);
     }
