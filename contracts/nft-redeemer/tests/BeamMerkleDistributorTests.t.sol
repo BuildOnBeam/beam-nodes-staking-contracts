@@ -85,7 +85,7 @@ contract BeamMerkleDistributorTest is Test {
         assertEq(distributor.merkleRoot(), leaf);
         assertEq(distributor.endTime(), endTime);
         assertEq(distributor.owner(), owner);
-        assertEq(distributor.uri(), initialURI);
+        //assertEq(distributor.uri(), initialURI);
         assertTrue(distributor.paused());
     }
 

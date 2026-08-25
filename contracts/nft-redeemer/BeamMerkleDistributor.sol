@@ -25,7 +25,7 @@ contract BeamMerkleDistributor is
     address public immutable override token;
     bytes32 public override merkleRoot;
     uint256 public endTime;
-    string internal _uri;
+    string internal _baseUri;
 
     mapping(address => bool) public override isClaimed;
 
@@ -34,12 +34,12 @@ contract BeamMerkleDistributor is
         bytes32 merkleRoot_,
         uint256 endTime_,
         address owner_,
-        string memory uri_
+        string memory baseUri_
     ) Ownable(owner_) {
         token = token_;
         merkleRoot = merkleRoot_;
         endTime = endTime_;
-        _uri = uri_; // "ipfs://<CID>"
+        _baseUri = baseUri_; // "ipfs://<CID>"
 
         _pause(); // Start in paused state
     }
@@ -65,15 +65,15 @@ contract BeamMerkleDistributor is
     }
 
     function setURI(
-        string memory newuri
+        string memory newBaseUri
     ) external virtual onlyOwner {
-        _uri = newuri;
+        _baseUri = newBaseUri;
     }
 
     function uri(
         address account
     ) public view virtual returns (string memory) {
-        return string.concat(_uri, "/", Strings.toHexString(uint160(account), 20), ".json");
+        return string.concat(_baseUri, "/", Strings.toHexString(uint160(account), 20), ".json");
     }
 
     function withdraw(
@@ -112,7 +112,7 @@ contract BeamMerkleDistributor is
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encodePacked(account, amount))));
         if (!MerkleProof.verify(proof, merkleRoot, leaf)) revert InvalidProof();
 
-        // Mark it claimed and send the token.
+        // Mark it claimed before sending the token.
         isClaimed[account] = true;
         IERC20(token).safeTransfer(account, amount);
 
