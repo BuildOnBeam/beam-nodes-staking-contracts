@@ -103,7 +103,7 @@ contract Native721TokenStakingManagerV2 is
         StakingManagerSettings calldata settings,
         IERC721 stakingToken,
         address protocolRewardsRegistrar
-    ) external reinitializer(100) {
+    ) external reinitializer(101) {
         __Ownable_init(settings.admin);
         __StakingManager_init(settings);
 

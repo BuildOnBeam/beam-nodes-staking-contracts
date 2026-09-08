@@ -152,18 +152,6 @@ contract Native721TokenStakingManagerV2Test is StakingManagerTest, IERC721Receiv
         app2.initialize(defaultPoSSettings, IERC721(address(0)), registrar);
     }
 
-    function testInvalidWethAddress() public {
-        Native721TokenStakingManagerV2 app2 =
-            new Native721TokenStakingManagerV2(ICMInitializable.Allowed);
-        vm.expectRevert(
-            abi.encodeWithSelector(Native721TokenStakingManager.InvalidZeroAddress.selector)
-        );
-
-        StakingManagerSettings memory defaultPoSSettings = _defaultPoSSettings();
-        defaultPoSSettings.manager = validatorManager;
-        app2.initialize(defaultPoSSettings, IERC721(address(0)), registrar);
-    }
-
     function testZeroMinimumDelegationFee() public {
         Native721TokenStakingManagerV2 app2 =
             new Native721TokenStakingManagerV2(ICMInitializable.Allowed);

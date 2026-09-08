@@ -35,6 +35,15 @@ forge create contracts/nft-redeemer/NFTClaimRedeemer.sol:NFTClaimRedeemer \
   --constructor-args 0xNFT $BASE_AMOUNT $ALT_AMOUNT 0xOWNER 0xBURNER
 ```
 
+```bash
+forge create contracts/nft-redeemer/BeamMerkleDistributor.sol:BeamMerkleDistributor \
+  --ledger --rpc-url $RPC_URL \
+  --optimize --optimizer-runs 200 -vvv \
+  --verify \
+  --broadcast \
+  --constructor-args 0xNFT $MERKLE_ROOT $END_TIME 0xOWNER $IPFS_BASE_URI
+```
+
 ## Test
 
 ```bash
