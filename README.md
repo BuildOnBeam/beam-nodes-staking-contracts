@@ -90,7 +90,6 @@ function registerRewards(
 ### Validator Management
 
 - **Validator Registration**
-
   - Requires nodeID, BLS public key, and registration expiry
   - Supports both native token and NFT staking
   - Minimum stake requirements must be met
@@ -105,7 +104,6 @@ function registerRewards(
 ### Delegation System
 
 - **NFT Delegation**
-
   - Delegators can stake NFTs to support validators
   - Each NFT contributes to the validator's weight
   - Maximum NFT amount per validator is enforced
@@ -120,14 +118,12 @@ function registerRewards(
 ### Reward System
 
 - **Reward Pools**
-
   - Dual reward system: Primary and NFT-based pools
   - Primary pool for native token stakers
   - NFT pool for NFT-based stakers
   - Each pool has independent reward distribution
 
 - **Reward Distribution**
-
   - Epoch-based distribution system
   - Rewards are distributed based on:
     - Stake weight
@@ -136,7 +132,6 @@ function registerRewards(
   - Formula: `reward = (pool_amount * stake_weight * uptime_factor) / total_weight`
 
 - **Reward Management**
-
   - Rewards can be registered by contract owner
   - 7-day claim delay after epoch end
   - Rewards can be cancelled before claim period starts
@@ -404,3 +399,15 @@ If the settings **do** need to be changed, you need to find the corresponding sc
 - update the values in the script to reflect the new settings
 - run the script using the command documented in the file to generate the hex initialization data
 - execute `upgradeAndCall` via Safe transaction builder, and set the _data (bytes)_ parameter to the generated value
+
+## V2 Upgrade
+
+V2 _removes the Node Token_ from the staking protocol. All changes:
+
+- **initiateValidatorRegistration** doesn't require token IDs anymore, and staking NFTs is not a requirement for creating a validator anymore (Note: The minimum BEAM staking amount will be raised).
+- **registerNFTDelegation** and **registerNFTRedelegation** are deprecated and will throw after the upgrade.
+- **initiateNFTDelegatorRemoval** will instantly unlock NFT delegations. This is the preferred way to get delegated NFTs back for redemption.
+- **completeNFTDelegatorRemoval** will also instantly unlock any already pending removals of NFT delegations.
+- A new method **unlockValidatorNFTs(bytes32 validationID)** will be introduced, so validators can unstake their NFTs without having to end their validation.
+- For backwards compatibility, the contracts still internally support primary/secondary rewards setup, -cancellation and -claiming. Going forward, rewards for future epochs must be registered as **primary rewards only**.
+- **No** changes are necessary in the way _submitting uptime proofs_ or triggering reward calculations via _resolveRewards_ are handled.

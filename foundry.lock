@@ -1,0 +1,17 @@
+{
+  "lib/forge-std": {
+    "branch": {
+      "name": "v1",
+      "rev": "3b20d60d14b343ee4f908cb8079495c07f5e8981"
+    }
+  },
+  "lib/openzeppelin-contracts-upgradeable": {
+    "rev": "723f8cab09cdae1aca9ec9cc1cfa040c2d4b06c1"
+  },
+  "lib/solmate": {
+    "rev": "c93f7716c9909175d45f6ef80a34a650e2d24e56"
+  },
+  "lib/subnet-evm": {
+    "rev": "a1bfa0ed452426b2fef3f211ee02eb866d939cc7"
+  }
+}

@@ -31,9 +31,9 @@ contract GenerateStakingManagerData is Script {
     address constant VALIDATOR_MANAGER_ADDRESS =
         address(0x46d5a1B62095cE9497C6Cc7Ab1BDb8a09D7e3c36);
     uint64 constant MINIMUM_STAKE_DURATION = 1 hours;
-    uint256 constant MINIMUM_STAKE_AMOUNT = 20_000e18;
+    uint256 constant MINIMUM_STAKE_AMOUNT = 50_000e18; // V1 -> V2
     uint256 constant MAXIMUM_STAKE_AMOUNT = 200_000_000e18;
-    uint64 constant UNLOCK_PERIOD = 21 days;
+    uint64 constant UNLOCK_PERIOD = 30 minutes; // V1 -> V2
     uint16 constant MINIMUM_DELEGATION_FEE = 100; // 1% in basis points
     uint64 constant EPOCH_DURATION = 2629746; // 31556952/12 (gregorian calendar seconds / 12)
     uint256 constant MAXIMUM_NFT_AMOUNT = 1000;
@@ -44,7 +44,8 @@ contract GenerateStakingManagerData is Script {
     uint64 constant EPOCH_OFFSET = 55998;
     address constant UPTIME_KEEPER = address(0xfEFFD4f8b89111CD085B80Ce994aB34C7e001a69);
     // address constant WETH_ADDRESS = address(0xD51BFa777609213A653a2CD067c9A0132a2D316A);
-    address constant FEE_FLOW_ADDRESS = address(0x70D0); // TODO:
+    address constant ADDITIONAL_REWARDS_REGISTRAR_ADDRESS =
+        address(0x45f16A36E11B60a15B7E524249Eded7E1a084502); // Dev Multisig
 
     function run() external {
         // Add settings struct for initialization
@@ -70,7 +71,7 @@ contract GenerateStakingManagerData is Script {
             Native721TokenStakingManager.initialize.selector,
             settings,
             address(NFT_TOKEN_ADDRESS),
-            address(FEE_FLOW_ADDRESS)
+            address(ADDITIONAL_REWARDS_REGISTRAR_ADDRESS)
         );
 
         string memory initData = vm.toString(initSelector);
